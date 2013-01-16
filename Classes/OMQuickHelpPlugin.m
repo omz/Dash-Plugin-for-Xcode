@@ -153,6 +153,12 @@
             
             // search options menu items
             
+            searchOptionsItem = [[[NSMenuItem alloc] initWithTitle:@"Dash Search Options"
+                                                            action:nil
+                                                     keyEquivalent:@""] retain];
+            
+            searchOptionsItem.submenu = [[NSMenu alloc] initWithTitle:@"Dash Search Options"];
+            
             search_all_item = [[[NSMenuItem alloc] initWithTitle:@"Search All Docsets"
                                                           action:@selector(toggleSearchOptions:)
                                                    keyEquivalent:@""] retain];
@@ -169,13 +175,35 @@
             search_ios_item.target = self;
             search_osx_item.target = self;
             
-            [editMenuItem.submenu addItem:[NSMenuItem separatorItem]];
-            [editMenuItem.submenu addItem:search_all_item];
-            [editMenuItem.submenu addItem:search_ios_item];
-            [editMenuItem.submenu addItem:search_osx_item];
+            [searchOptionsItem.submenu addItem:search_all_item];
+            [searchOptionsItem.submenu addItem:search_ios_item];
+            [searchOptionsItem.submenu addItem:search_osx_item];
+            
+            if(![[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled])
+            {
+                [self addSearchOptionsMenu];
+            }
 		}
 	}
 	return self;
+}
+
+- (void)addSearchOptionsMenu
+{
+    NSMenuItem *editMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
+    
+    if(editMenuItem && !searchOptionsItem.parentItem)
+    {
+        [editMenuItem.submenu addItem:searchOptionsItem];
+    }
+}
+
+- (void)removeSearchOptionsMenu
+{
+    if(searchOptionsItem.parentItem)
+    {
+        [searchOptionsItem.parentItem.submenu removeItem:searchOptionsItem];
+    }
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
@@ -208,12 +236,22 @@
 - (void)toggleOpenInDashEnabled:(id)sender
 {
 	BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
-	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMOpenInDashDisabled];
+    disabled = !disabled;
+	[[NSUserDefaults standardUserDefaults] setBool:disabled forKey:kOMOpenInDashDisabled];
+    
+    if(disabled)
+    {
+        [self removeSearchOptionsMenu];
+    }
+    else
+    {
+        [self addSearchOptionsMenu];
+    }
 }
 
 - (void)toggleSearchOptions:(NSMenuItem *)menuItem
 {
-    int searchOption;
+    int searchOption = 0;
     
     if (menuItem == search_all_item)
     {

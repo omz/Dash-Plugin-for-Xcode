@@ -13,6 +13,7 @@
 {
     NSMenuItem *toggleDashItem;
     
+    NSMenuItem *searchOptionsItem;
     NSMenuItem *search_all_item;
     NSMenuItem *search_ios_item;
     NSMenuItem *search_osx_item;
