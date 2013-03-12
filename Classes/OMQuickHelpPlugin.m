@@ -89,13 +89,11 @@
 {
 	if (searchString.length == 0) {
 		NSBeep();
-	} else {
-		BOOL opened = [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:[NSString stringWithFormat:@"dash://%@", searchString]]];
-		if (!opened) {
-			return NO;
-		}
+		return NO;
 	}
-	return YES;
+	NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
+	[pboard setString:searchString forType:NSStringPboardType];
+	return NSPerformService(@"Look Up in Dash", pboard);
 }
 
 @end
