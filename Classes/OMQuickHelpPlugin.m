@@ -11,6 +11,7 @@
 
 #define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
 #define kOMOpenInDashDisabled				@"OMOpenInDashDisabled"
+#define kOMDashSearchPlatform               @"OMDashSearchPlatform"
 
 @interface NSObject (OMSwizzledIDESourceCodeEditor)
 
@@ -39,7 +40,7 @@
 		}
 	}
 	@catch (NSException *exception) {
-		
+
 	}
 }
 
@@ -66,7 +67,17 @@
 		@try {
 			NSArray *linkRanges = [textView valueForKey:@"_temporaryLinkRanges"];
 			NSMutableString *searchString = [NSMutableString string];
-			for (NSValue *rangeValue in linkRanges) {
+
+            // search options
+            NSString *searchPlatform = [[NSUserDefaults standardUserDefaults] stringForKey:kOMDashSearchPlatform];
+
+            if ([searchPlatform length] > 0) {
+                [searchString appendString:searchPlatform];
+                [searchString appendString:@":"];
+            }
+
+            // link
+            for (NSValue *rangeValue in linkRanges) {
 				NSRange range = [rangeValue rangeValue];
 				NSString *stringFromRange = [textView.textStorage.string substringWithRange:range];
 				[searchString appendString:stringFromRange];
@@ -77,7 +88,7 @@
 			}
 		}
 		@catch (NSException *exception) {
-			
+
 		}
 	} else {
 		//Preserve the default behavior for cmd-clicks:
@@ -89,13 +100,20 @@
 {
 	if (searchString.length == 0) {
 		NSBeep();
-	} else {
-		BOOL opened = [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:[NSString stringWithFormat:@"dash://%@", searchString]]];
-		if (!opened) {
-			return NO;
-		}
+    } else {
+        NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
+
+        [pboard setString:searchString forType:NSStringPboardType];
+
+        if (NSPerformService(@"Look Up in Dash", pboard)) {
+            return YES;
+        }
+
+		if ([[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:[NSString stringWithFormat:@"dash://%@", searchString]]]) {
+            return YES;
+        }
 	}
-	return YES;
+    return NO;
 }
 
 @end
@@ -106,13 +124,15 @@
 
 + (void)pluginDidLoad:(NSBundle *)plugin
 {
+    static OMQuickHelpPlugin *quickHelpPlugin = nil;
+
 	static dispatch_once_t onceToken;
 	dispatch_once(&onceToken, ^{
 		if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
 			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL];
 			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(textView:didClickOnTemporaryLinkAtCharacterIndex:event:isAltEvent:) withMethod:@selector(om_textView:didClickOnTemporaryLinkAtCharacterIndex:event:isAltEvent:) error:NULL];
 		}
-		[[self alloc] init];
+		quickHelpPlugin = [[self alloc] init];
 	});
 }
 
@@ -120,27 +140,129 @@
 {
 	self  = [super init];
 	if (self) {
+        NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+
+        if ([userDefaults stringForKey:kOMDashSearchPlatform] == nil) {
+            [userDefaults setObject:@"" forKey:kOMDashSearchPlatform];
+        }
+
 		//TODO: It would be better to add this to the Help menu, but that seems to be populated from somewhere else...
 		NSMenuItem *editMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
 		if (editMenuItem) {
 			[[editMenuItem submenu] addItem:[NSMenuItem separatorItem]];
-			NSMenuItem *toggleDashItem = [[[NSMenuItem alloc] initWithTitle:@"Open Quick Help in Dash" action:@selector(toggleOpenInDashEnabled:) keyEquivalent:@""] autorelease];
-			[toggleDashItem setTarget:self];
-			[[editMenuItem submenu] addItem:toggleDashItem];
-		}
+
+            // toggle Dash
+            NSMenuItem *toggleDashItem = [[NSMenuItem alloc] initWithTitle:@"Open Quick Help in Dash"
+                                                                    action:@selector(toggleOpenInDashEnabled:)
+                                                             keyEquivalent:@""];
+            [toggleDashItem setTarget:self];
+
+            [[editMenuItem submenu] addItem:toggleDashItem];
+            [toggleDashItem release];
+
+            // search options menu items
+            NSMenuItem *searchPlatformsItem = [[NSMenuItem alloc] initWithTitle:@"Dash Search Platform"
+                                                                         action:NULL
+                                                                  keyEquivalent:@""];
+
+            [[editMenuItem submenu] addItem:searchPlatformsItem];
+            [searchPlatformsItem release];
+
+            NSMenu *searchOptionsMenu = [[NSMenu alloc] initWithTitle:@"Dash Search Options"];
+
+            [searchPlatformsItem setSubmenu:searchOptionsMenu];
+            [searchOptionsMenu release];
+
+            NSMenuItem *searchAllItem = [[NSMenuItem alloc] initWithTitle:@"All Platforms"
+                                                                   action:@selector(toggleSearchPlatform:)
+                                                            keyEquivalent:@""];
+
+            [searchAllItem setTarget:self];
+            [searchAllItem setRepresentedObject:@""];
+
+            [searchOptionsMenu addItem:searchAllItem];
+            [searchAllItem release];
+
+            NSArray *docsets = [(NSArray *)CFPreferencesCopyAppValue((CFStringRef)@"docsets",
+                                                                     (CFStringRef)@"com.kapeli.dash") autorelease];
+            NSMutableSet *platforms = [NSMutableSet set];
+
+            for (NSDictionary *docset in docsets) {
+                if (![docset isKindOfClass:[NSDictionary class]]) {
+                    continue;
+                }
+
+                NSString *platform = [docset objectForKey:@"platform"];
+
+                if ([platforms containsObject:platform]) {
+                    continue;
+                }
+
+                [platforms addObject:platform];
+
+                if (![platform isKindOfClass:[NSString class]]) {
+                    continue;
+                }
+
+                NSMenuItem *searchPlatformItem = [[NSMenuItem alloc] initWithTitle:platform
+                                                                            action:@selector(toggleSearchPlatform:)
+                                                                     keyEquivalent:@""];
+
+                [searchPlatformItem setTarget:self];
+                [searchPlatformItem setRepresentedObject:platform];
+
+                [searchOptionsMenu addItem:searchPlatformItem];
+                [searchPlatformItem release];
+            }
+
+            if ([platforms count] == 0) {
+                NSMenuItem *searchiOSItem = [[NSMenuItem alloc] initWithTitle:@"iphoneos"
+                                                                       action:@selector(toggleSearchPlatform:)
+                                                                keyEquivalent:@""];
+
+                [searchiOSItem setTarget:self];
+                [searchiOSItem setRepresentedObject:@"iphoneos"];
+
+                [searchOptionsMenu addItem:searchiOSItem];
+                [searchiOSItem release];
+
+                NSMenuItem *searchOSXItem = [[NSMenuItem alloc] initWithTitle:@"macosx"
+                                                                       action:@selector(toggleSearchPlatform:)
+                                                                keyEquivalent:@""];
+
+                [searchOSXItem setTarget:self];
+                [searchOSXItem setRepresentedObject:@"macosx"];
+
+                [searchOptionsMenu addItem:searchOSXItem];
+                [searchOSXItem release];
+            }
+        }
 	}
 	return self;
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
 {
-	if ([menuItem action] == @selector(toggleOpenInDashEnabled:)) {
+    SEL action = [menuItem action];
+
+	if (action == @selector(toggleOpenInDashEnabled:)) {
 		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled]) {
 			[menuItem setState:NSOffState];
 		} else {
 			[menuItem setState:NSOnState];
 		}
 	}
+	else if (action == @selector(toggleSearchPlatform:)) {
+        NSString *searchPlatform = [[NSUserDefaults standardUserDefaults] stringForKey:kOMDashSearchPlatform];
+        id representedObject = [menuItem representedObject];
+
+        if ([searchPlatform isEqual:representedObject]) {
+			[menuItem setState:NSOnState];
+		} else {
+			[menuItem setState:NSOffState];
+		}
+	}
+
 	return YES;
 }
 
@@ -148,6 +270,14 @@
 {
 	BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
 	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMOpenInDashDisabled];
+}
+
+- (void)toggleSearchPlatform:(id)sender
+{
+    NSMenuItem *menuItem = (NSMenuItem *)sender;
+    id representedObject = [menuItem representedObject];
+    
+	[[NSUserDefaults standardUserDefaults] setObject:representedObject forKey:kOMDashSearchPlatform];
 }
 
 @end
