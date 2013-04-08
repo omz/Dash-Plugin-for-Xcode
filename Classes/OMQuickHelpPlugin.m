@@ -12,6 +12,8 @@
 #define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
 #define kOMOpenInDashDisabled				@"OMOpenInDashDisabled"
 #define kOMDashSearchPlatform               @"OMDashSearchPlatform"
+#define kOMCopySelectorDisabled             @"OMCopySelectorOnCommandShiftDisabled"
+
 
 @interface NSObject (OMSwizzledIDESourceCodeEditor)
 
@@ -63,6 +65,8 @@
 - (void)om_textView:(NSTextView *)textView didClickOnTemporaryLinkAtCharacterIndex:(unsigned long long)charIndex event:(NSEvent *)event isAltEvent:(BOOL)isAltEvent
 {
 	BOOL dashDisabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
+	BOOL copySelectorDisabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMCopySelectorDisabled];
+
 	if (isAltEvent && !dashDisabled) {
 		@try {
 			NSArray *linkRanges = [textView valueForKey:@"_temporaryLinkRanges"];
@@ -90,6 +94,28 @@
 		@catch (NSException *exception) {
 
 		}
+	} else if (!copySelectorDisabled && !isAltEvent && ([event modifierFlags] & NSShiftKeyMask)) {
+        NSArray *linkRanges = [textView valueForKey:@"_temporaryLinkRanges"];
+        NSMutableString *selectorString = [NSMutableString string];
+
+        // link
+        for (NSValue *rangeValue in linkRanges) {
+            NSRange range = [rangeValue rangeValue];
+            NSString *stringFromRange = [textView.textStorage.string substringWithRange:range];
+            [selectorString appendString:stringFromRange];
+        }
+        
+        if ([selectorString length] > 0) {
+            NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+            NSString *wrappedString = [NSString stringWithFormat:@"@selector(%@)", selectorString];
+            
+            [pasteboard clearContents];
+            [pasteboard writeObjects:[NSArray arrayWithObject:wrappedString]];
+        }
+        else {
+            //Preserve the default behavior for cmd-clicks:
+            [self om_textView:textView didClickOnTemporaryLinkAtCharacterIndex:charIndex event:event isAltEvent:isAltEvent];
+        }
 	} else {
 		//Preserve the default behavior for cmd-clicks:
 		[self om_textView:textView didClickOnTemporaryLinkAtCharacterIndex:charIndex event:event isAltEvent:isAltEvent];
@@ -183,8 +209,8 @@
             [searchOptionsMenu addItem:searchAllItem];
             [searchAllItem release];
 
-            NSArray *docsets = [(NSArray *)CFPreferencesCopyAppValue((CFStringRef)@"docsets",
-                                                                     (CFStringRef)@"com.kapeli.dash") autorelease];
+            NSArray *docsets = (NSArray *)CFPreferencesCopyAppValue((CFStringRef)@"docsets",
+                                                                    (CFStringRef)@"com.kapeli.dash");
             NSMutableSet *platforms = [NSMutableSet set];
 
             for (NSDictionary *docset in docsets) {
@@ -215,6 +241,10 @@
                 [searchPlatformItem release];
             }
 
+            if (docsets != NULL) {
+                CFRelease(docsets);
+            }
+
             if ([platforms count] == 0) {
                 NSMenuItem *searchiOSItem = [[NSMenuItem alloc] initWithTitle:@"iphoneos"
                                                                        action:@selector(toggleSearchPlatform:)
@@ -236,6 +266,15 @@
                 [searchOptionsMenu addItem:searchOSXItem];
                 [searchOSXItem release];
             }
+
+            // toggle Copy selector on command-shift-click
+            NSMenuItem *toggleCopySelectorItem = [[NSMenuItem alloc] initWithTitle:@"Copy Selector"
+                                                                            action:@selector(toggleCopySelectorEnabled:)
+                                                                     keyEquivalent:@""];
+            [toggleCopySelectorItem setTarget:self];
+
+            [[editMenuItem submenu] addItem:toggleCopySelectorItem];
+            [toggleCopySelectorItem release];
         }
 	}
 	return self;
@@ -247,6 +286,13 @@
 
 	if (action == @selector(toggleOpenInDashEnabled:)) {
 		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled]) {
+			[menuItem setState:NSOffState];
+		} else {
+			[menuItem setState:NSOnState];
+		}
+	}
+	else if (action == @selector(toggleCopySelectorEnabled:)) {
+		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMCopySelectorDisabled]) {
 			[menuItem setState:NSOffState];
 		} else {
 			[menuItem setState:NSOnState];
@@ -270,6 +316,12 @@
 {
 	BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
 	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMOpenInDashDisabled];
+}
+
+- (void)toggleCopySelectorEnabled:(id)sender
+{
+	BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMCopySelectorDisabled];
+	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMCopySelectorDisabled];
 }
 
 - (void)toggleSearchPlatform:(id)sender
