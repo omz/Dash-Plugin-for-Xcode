@@ -101,9 +101,79 @@
 
 - (BOOL)om_showQuickHelpForSearchString:(NSString *)searchString
 {
+    searchString = [self om_appendActiveSchemeKeyword:searchString];
 	NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
 	[pboard setString:searchString forType:NSStringPboardType];
 	return NSPerformService(@"Look Up in Dash", pboard);
+}
+
+- (NSString *)om_appendActiveSchemeKeyword:(NSString *)searchString
+{
+    @try { // I don't trust myself with this swizzling business
+        id windowController = [[NSApp keyWindow] windowController];
+        id workspace = [windowController valueForKey:@"_workspace"];
+        id runContextManager = [workspace valueForKey:@"runContextManager"];
+        id activeDestination = [runContextManager valueForKey:@"_activeRunDestination"];
+        NSString *destination = [activeDestination valueForKey:@"targetIdentifier"];
+        
+        if(destination && [destination isKindOfClass:[NSString class]] && destination.length)
+        {
+            destination = [destination lowercaseString];
+            BOOL iOS = [destination hasPrefix:@"iphone"] || [destination hasPrefix:@"ipad"] || [destination hasPrefix:@"ios"];
+            BOOL mac = [destination hasPrefix:@"mac"] || [destination hasPrefix:@"osx"];
+            if(iOS || mac)
+            {
+                NSUserDefaults *defaults = [[[NSUserDefaults alloc] init] autorelease];
+                [defaults addSuiteNamed:@"com.kapeli.dash"];
+                [defaults synchronize];
+                NSArray *docsets = [defaults objectForKey:@"docsets"];
+                docsets = [docsets sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+                    BOOL obj1Enabled = [[obj1 objectForKey:@"isProfileEnabled"] boolValue];
+                    BOOL obj2Enabled = [[obj2 objectForKey:@"isProfileEnabled"] boolValue];
+                    if(obj1Enabled && !obj2Enabled)
+                    {
+                        return NSOrderedAscending;
+                    }
+                    else if(!obj1Enabled && obj2Enabled)
+                    {
+                        return NSOrderedDescending;
+                    }
+                    else
+                    {
+                        return NSOrderedSame;
+                    }
+                }];
+                
+                NSString *foundKeyword = nil;
+                for(NSDictionary *docset in docsets)
+                {
+                    NSString *platform = [[docset objectForKey:@"platform"] lowercaseString];
+                    BOOL found = NO;
+                    if(iOS && ([platform hasPrefix:@"iphone"] || [platform hasPrefix:@"ios"]))
+                    {
+                        found = YES;
+                    }
+                    else if(mac && ([platform hasPrefix:@"macosx"] || [platform hasPrefix:@"osx"]))
+                    {
+                        found = YES;
+                    }
+                    if(found)
+                    {
+                        NSString *keyword = [docset objectForKey:@"keyword"];
+                        foundKeyword = (keyword) ? keyword : platform;
+                        break;
+                    }
+                }
+                if(foundKeyword)
+                {
+                    searchString = [[[foundKeyword stringByReplacingOccurrencesOfString:@":" withString:@""] stringByAppendingString:@":"] stringByAppendingString:searchString];
+                }
+                [defaults removeSuiteNamed:@"com.kapeli.dash"];
+            }
+        }
+    }
+    @catch (NSException *exception) { }
+    return searchString;
 }
 
 @end
