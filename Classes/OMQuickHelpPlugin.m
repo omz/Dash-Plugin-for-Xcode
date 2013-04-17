@@ -160,7 +160,7 @@
                     if(found)
                     {
                         NSString *keyword = [docset objectForKey:@"keyword"];
-                        foundKeyword = (keyword) ? keyword : platform;
+                        foundKeyword = (keyword && keyword.length) ? keyword : platform;
                         break;
                     }
                 }
