@@ -33,10 +33,17 @@
 			return;
 		}
 		NSString *symbolString = [self valueForKeyPath:@"selectedExpression.symbolString"];
-		BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
-		if (!dashOpened) {
-			[self om_dashNotInstalledFallback];
-		}
+        if(symbolString.length)
+        {
+            BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
+            if (!dashOpened) {
+                [self om_dashNotInstalledFallback];
+            }
+        }
+        else
+        {
+            NSBeep();
+        }
 	}
 	@catch (NSException *exception) {
 		
@@ -87,10 +94,6 @@
 
 - (BOOL)om_showQuickHelpForSearchString:(NSString *)searchString
 {
-	if (searchString.length == 0) {
-		NSBeep();
-		return NO;
-	}
 	NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
 	[pboard setString:searchString forType:NSStringPboardType];
 	return NSPerformService(@"Look Up in Dash", pboard);
