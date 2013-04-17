@@ -11,6 +11,7 @@
 
 #define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
 #define kOMOpenInDashDisabled				@"OMOpenInDashDisabled"
+#define kOMDashSearchOption  				@"OMDashSearchOption"
 
 @interface NSObject (OMSwizzledIDESourceCodeEditor)
 
@@ -73,6 +74,22 @@
 		@try {
 			NSArray *linkRanges = [textView valueForKey:@"_temporaryLinkRanges"];
 			NSMutableString *searchString = [NSMutableString string];
+            
+            // search options
+            
+            int searchOption = [[NSUserDefaults standardUserDefaults] integerForKey:kOMDashSearchOption];
+            
+            if(searchOption == 1)
+            {
+                [searchString appendString:@"iphoneos:"];
+            }
+            else if(searchOption == 2)
+            {
+                [searchString appendString:@"macosx:"];
+            }
+            
+            // link
+            
 			for (NSValue *rangeValue in linkRanges) {
 				NSRange range = [rangeValue rangeValue];
 				NSString *stringFromRange = [textView.textStorage.string substringWithRange:range];
@@ -202,30 +219,132 @@
 		NSMenuItem *editMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
 		if (editMenuItem) {
 			[[editMenuItem submenu] addItem:[NSMenuItem separatorItem]];
-			NSMenuItem *toggleDashItem = [[[NSMenuItem alloc] initWithTitle:@"Open Quick Help in Dash" action:@selector(toggleOpenInDashEnabled:) keyEquivalent:@""] autorelease];
+            
+            // toggle Dash
+            
+			toggleDashItem = [[[NSMenuItem alloc] initWithTitle:@"Open Quick Help in Dash"
+                                                         action:@selector(toggleOpenInDashEnabled:)
+                                                  keyEquivalent:@""] retain];
 			[toggleDashItem setTarget:self];
+            
 			[[editMenuItem submenu] addItem:toggleDashItem];
+            
+            // search options menu items
+            
+            searchOptionsItem = [[[NSMenuItem alloc] initWithTitle:@"Dash Search Options"
+                                                            action:nil
+                                                     keyEquivalent:@""] retain];
+            
+            searchOptionsItem.submenu = [[NSMenu alloc] initWithTitle:@"Dash Search Options"];
+            
+            search_all_item = [[[NSMenuItem alloc] initWithTitle:@"Search All Docsets"
+                                                          action:@selector(toggleSearchOptions:)
+                                                   keyEquivalent:@""] retain];
+            
+            search_ios_item = [[[NSMenuItem alloc] initWithTitle:@"Search Only iOS Documentation"
+                                                          action:@selector(toggleSearchOptions:)
+                                                   keyEquivalent:@""] retain];
+            
+            search_osx_item = [[[NSMenuItem alloc] initWithTitle:@"Search Only OS X Documentation"
+                                                          action:@selector(toggleSearchOptions:)
+                                                   keyEquivalent:@""] retain];
+            
+            search_all_item.target = self;
+            search_ios_item.target = self;
+            search_osx_item.target = self;
+            
+            [searchOptionsItem.submenu addItem:search_all_item];
+            [searchOptionsItem.submenu addItem:search_ios_item];
+            [searchOptionsItem.submenu addItem:search_osx_item];
+            
+            if(![[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled])
+            {
+                [self addSearchOptionsMenu];
+            }
 		}
 	}
 	return self;
 }
 
+- (void)addSearchOptionsMenu
+{
+    NSMenuItem *editMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
+    
+    if(editMenuItem && !searchOptionsItem.parentItem)
+    {
+        [editMenuItem.submenu addItem:searchOptionsItem];
+    }
+}
+
+- (void)removeSearchOptionsMenu
+{
+    if(searchOptionsItem.parentItem)
+    {
+        [searchOptionsItem.parentItem.submenu removeItem:searchOptionsItem];
+    }
+}
+
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
 {
-	if ([menuItem action] == @selector(toggleOpenInDashEnabled:)) {
+    int searchOption = [[NSUserDefaults standardUserDefaults] integerForKey:kOMDashSearchOption];
+    
+	if (menuItem == toggleDashItem) {
 		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled]) {
 			[menuItem setState:NSOffState];
 		} else {
 			[menuItem setState:NSOnState];
 		}
 	}
+    else if (menuItem == search_all_item)
+    {
+        menuItem.state = (searchOption == 0);
+    }
+    else if (menuItem == search_ios_item)
+    {
+        menuItem.state = (searchOption == 1);
+    }
+    else if (menuItem == search_osx_item)
+    {
+        menuItem.state = (searchOption == 2);
+    }
+    
 	return YES;
 }
 
 - (void)toggleOpenInDashEnabled:(id)sender
 {
 	BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
-	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMOpenInDashDisabled];
+    disabled = !disabled;
+	[[NSUserDefaults standardUserDefaults] setBool:disabled forKey:kOMOpenInDashDisabled];
+    
+    if(disabled)
+    {
+        [self removeSearchOptionsMenu];
+    }
+    else
+    {
+        [self addSearchOptionsMenu];
+    }
+}
+
+- (void)toggleSearchOptions:(NSMenuItem *)menuItem
+{
+    int searchOption = 0;
+    
+    if (menuItem == search_all_item)
+    {
+        searchOption = 0;
+    }
+    else if (menuItem == search_ios_item)
+    {
+        searchOption = 1;
+    }
+    else if (menuItem == search_osx_item)
+    {
+        searchOption = 2;
+    }
+    
+    [[NSUserDefaults standardUserDefaults] setInteger:searchOption forKey:kOMDashSearchOption];
 }
 
 @end

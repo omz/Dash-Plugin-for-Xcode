@@ -9,8 +9,14 @@
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 
-@interface OMQuickHelpPlugin : NSObject {
-	
+@interface OMQuickHelpPlugin : NSObject
+{
+    NSMenuItem *toggleDashItem;
+    
+    NSMenuItem *searchOptionsItem;
+    NSMenuItem *search_all_item;
+    NSMenuItem *search_ios_item;
+    NSMenuItem *search_osx_item;
 }
 
 - (void)toggleOpenInDashEnabled:(id)sender;
