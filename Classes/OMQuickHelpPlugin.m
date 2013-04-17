@@ -78,10 +78,17 @@
 				NSString *stringFromRange = [textView.textStorage.string substringWithRange:range];
 				[searchString appendString:stringFromRange];
 			}
-			BOOL dashOpened = [self om_showQuickHelpForSearchString:searchString];
-			if (!dashOpened) {
-				[self om_dashNotInstalledFallback];
-			}
+            if(searchString.length)
+            {
+                BOOL dashOpened = [self om_showQuickHelpForSearchString:searchString];
+                if (!dashOpened) {
+                    [self om_dashNotInstalledFallback];
+                }
+            }
+            else
+            {
+                NSBeep();
+            }
 		}
 		@catch (NSException *exception) {
 			
