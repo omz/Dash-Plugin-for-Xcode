@@ -11,6 +11,7 @@
 
 #define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
 #define kOMOpenInDashDisabled				@"OMOpenInDashDisabled"
+#define kOMDashPlatformDetectionDisabled    @"OMDashPlatformDetectionDisabled"
 
 @interface NSObject (OMSwizzledIDESourceCodeEditor)
 
@@ -109,70 +110,73 @@
 
 - (NSString *)om_appendActiveSchemeKeyword:(NSString *)searchString
 {
-    @try { // I don't trust myself with this swizzling business
-        id windowController = [[NSApp keyWindow] windowController];
-        id workspace = [windowController valueForKey:@"_workspace"];
-        id runContextManager = [workspace valueForKey:@"runContextManager"];
-        id activeDestination = [runContextManager valueForKey:@"_activeRunDestination"];
-        NSString *destination = [activeDestination valueForKey:@"targetIdentifier"];
-        
-        if(destination && [destination isKindOfClass:[NSString class]] && destination.length)
-        {
-            destination = [destination lowercaseString];
-            BOOL iOS = [destination hasPrefix:@"iphone"] || [destination hasPrefix:@"ipad"] || [destination hasPrefix:@"ios"];
-            BOOL mac = [destination hasPrefix:@"mac"] || [destination hasPrefix:@"osx"];
-            if(iOS || mac)
+    if(![[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionDisabled])
+    {
+        @try { // I don't trust myself with this swizzling business
+            id windowController = [[NSApp keyWindow] windowController];
+            id workspace = [windowController valueForKey:@"_workspace"];
+            id runContextManager = [workspace valueForKey:@"runContextManager"];
+            id activeDestination = [runContextManager valueForKey:@"_activeRunDestination"];
+            NSString *destination = [activeDestination valueForKey:@"targetIdentifier"];
+            
+            if(destination && [destination isKindOfClass:[NSString class]] && destination.length)
             {
-                NSUserDefaults *defaults = [[[NSUserDefaults alloc] init] autorelease];
-                [defaults addSuiteNamed:@"com.kapeli.dash"];
-                [defaults synchronize];
-                NSArray *docsets = [defaults objectForKey:@"docsets"];
-                docsets = [docsets sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
-                    BOOL obj1Enabled = [[obj1 objectForKey:@"isProfileEnabled"] boolValue];
-                    BOOL obj2Enabled = [[obj2 objectForKey:@"isProfileEnabled"] boolValue];
-                    if(obj1Enabled && !obj2Enabled)
-                    {
-                        return NSOrderedAscending;
-                    }
-                    else if(!obj1Enabled && obj2Enabled)
-                    {
-                        return NSOrderedDescending;
-                    }
-                    else
-                    {
-                        return NSOrderedSame;
-                    }
-                }];
-                
-                NSString *foundKeyword = nil;
-                for(NSDictionary *docset in docsets)
+                destination = [destination lowercaseString];
+                BOOL iOS = [destination hasPrefix:@"iphone"] || [destination hasPrefix:@"ipad"] || [destination hasPrefix:@"ios"];
+                BOOL mac = [destination hasPrefix:@"mac"] || [destination hasPrefix:@"osx"];
+                if(iOS || mac)
                 {
-                    NSString *platform = [[docset objectForKey:@"platform"] lowercaseString];
-                    BOOL found = NO;
-                    if(iOS && ([platform hasPrefix:@"iphone"] || [platform hasPrefix:@"ios"]))
+                    NSUserDefaults *defaults = [[[NSUserDefaults alloc] init] autorelease];
+                    [defaults addSuiteNamed:@"com.kapeli.dash"];
+                    [defaults synchronize];
+                    NSArray *docsets = [defaults objectForKey:@"docsets"];
+                    docsets = [docsets sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+                        BOOL obj1Enabled = [[obj1 objectForKey:@"isProfileEnabled"] boolValue];
+                        BOOL obj2Enabled = [[obj2 objectForKey:@"isProfileEnabled"] boolValue];
+                        if(obj1Enabled && !obj2Enabled)
+                        {
+                            return NSOrderedAscending;
+                        }
+                        else if(!obj1Enabled && obj2Enabled)
+                        {
+                            return NSOrderedDescending;
+                        }
+                        else
+                        {
+                            return NSOrderedSame;
+                        }
+                    }];
+                    
+                    NSString *foundKeyword = nil;
+                    for(NSDictionary *docset in docsets)
                     {
-                        found = YES;
+                        NSString *platform = [[docset objectForKey:@"platform"] lowercaseString];
+                        BOOL found = NO;
+                        if(iOS && ([platform hasPrefix:@"iphone"] || [platform hasPrefix:@"ios"]))
+                        {
+                            found = YES;
+                        }
+                        else if(mac && ([platform hasPrefix:@"macosx"] || [platform hasPrefix:@"osx"]))
+                        {
+                            found = YES;
+                        }
+                        if(found)
+                        {
+                            NSString *keyword = [docset objectForKey:@"keyword"];
+                            foundKeyword = (keyword && keyword.length) ? keyword : platform;
+                            break;
+                        }
                     }
-                    else if(mac && ([platform hasPrefix:@"macosx"] || [platform hasPrefix:@"osx"]))
+                    if(foundKeyword)
                     {
-                        found = YES;
+                        searchString = [[[foundKeyword stringByReplacingOccurrencesOfString:@":" withString:@""] stringByAppendingString:@":"] stringByAppendingString:searchString];
                     }
-                    if(found)
-                    {
-                        NSString *keyword = [docset objectForKey:@"keyword"];
-                        foundKeyword = (keyword && keyword.length) ? keyword : platform;
-                        break;
-                    }
+                    [defaults removeSuiteNamed:@"com.kapeli.dash"];
                 }
-                if(foundKeyword)
-                {
-                    searchString = [[[foundKeyword stringByReplacingOccurrencesOfString:@":" withString:@""] stringByAppendingString:@":"] stringByAppendingString:searchString];
-                }
-                [defaults removeSuiteNamed:@"com.kapeli.dash"];
             }
         }
+        @catch (NSException *exception) { }
     }
-    @catch (NSException *exception) { }
     return searchString;
 }
 
@@ -202,9 +206,14 @@
 		NSMenuItem *editMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
 		if (editMenuItem) {
 			[[editMenuItem submenu] addItem:[NSMenuItem separatorItem]];
-			NSMenuItem *toggleDashItem = [[[NSMenuItem alloc] initWithTitle:@"Open Quick Help in Dash" action:@selector(toggleOpenInDashEnabled:) keyEquivalent:@""] autorelease];
-			[toggleDashItem setTarget:self];
-			[[editMenuItem submenu] addItem:toggleDashItem];
+			NSMenuItem *dashMenuItem = [[[NSMenuItem alloc] initWithTitle:@"Dash Integration" action:nil keyEquivalent:@""] autorelease];
+            NSMenu *dashMenu = [[[NSMenu alloc] init] autorelease];
+            [dashMenuItem setSubmenu:dashMenu];
+			NSMenuItem *toggleDashItem = [dashMenu addItemWithTitle:@"Enable Dash Quick Help" action:@selector(toggleOpenInDashEnabled:) keyEquivalent:@""];
+            [toggleDashItem setTarget:self];
+            NSMenuItem *togglePlatformDetection = [dashMenu addItemWithTitle:@"Enable Dash Platform Detection" action:@selector(toggleDashPlatformDetection:) keyEquivalent:@""];
+            [togglePlatformDetection setTarget:self];
+			[[editMenuItem submenu] addItem:dashMenuItem];
 		}
 	}
 	return self;
@@ -219,6 +228,13 @@
 			[menuItem setState:NSOnState];
 		}
 	}
+    else if([menuItem action] == @selector(toggleDashPlatformDetection:)) {
+		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionDisabled]) {
+			[menuItem setState:NSOffState];
+		} else {
+			[menuItem setState:NSOnState];
+		}
+	}
 	return YES;
 }
 
@@ -226,6 +242,12 @@
 {
 	BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
 	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMOpenInDashDisabled];
+}
+
+- (void)toggleDashPlatformDetection:(id)sender
+{
+    BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionDisabled];
+	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMDashPlatformDetectionDisabled];
 }
 
 @end

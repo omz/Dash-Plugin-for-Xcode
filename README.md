@@ -2,26 +2,25 @@
 
 ## Overview
 
-This plugin allows you to use [Dash](http://kapeli.com/dash/) instead of Xcode's own documentation viewer when using option-click (or the equivalent keyboard shortcut) to view the documentation for the selected symbol.
+This plugin allows you to use [Dash](http://kapeli.com/dash/) instead of Xcode's own documentation viewer when using **Option-Click** (or the equivalent keyboard shortcut) to view the documentation for the selected symbol.
 
 While you could also use Dash's "Look up in Dash" Services menu item, this is better in several ways:
 
-* It's smart about looking up symbols that are split across multiple ranges (e.g. option-clicking on `foo:` in something like `[self foo:x withBar:y andBaz:z]` searches for `foo:withBar:andBaz:` instead of just `foo:`).
+* It's smart about looking up symbols that are split across multiple ranges (e.g. **Option-Clicking** on `foo:` in something like `[self foo:x withBar:y andBaz:z]` searches for `foo:withBar:andBaz:` instead of just `foo:`).
 * It's faster to use with the mouse, and the keyboard shortcut can be set directly in Xcode's preferences.
 * You don't have to select the entire symbol that you want to look up.
 * It automatically detects your active scheme (iOS or Mac) and searches only the active scheme's docset
 
-If you want to use Xcode's built-in documentation popover again, you can temporarily disable the Dash integration using the "Open Quick Help in Dash" item in the "Edit" menu.
+If you want to use Xcode's built-in documentation popover again, you can temporarily disable the Dash integration using the "Enable Dash Quick Help" item in the "Edit" menu.
 
 If you like reading Apple's documentation, you might also like my [iOS app DocSets](https://github.com/omz/DocSets-for-iOS) for reading on your iPad or iPhone, even if you have no internet connection.
 
 I'm [@olemoritz](http://twitter.com/olemoritz) on Twitter.
 
-## Installation
+## Usage & Installation
 
-Simply build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
-
-This is tested on OS X 10.8 with Xcode 4.5.
+1. Download the source, build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
+2. To use - **Option-Click** any method/class/symbol in Xcode's text editor.
 
 ## License
 
