@@ -1,10 +1,5 @@
 # Dash Plugin for Xcode
 
-## Usage & Installation
-
-1. Download the source, build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
-2. To use - **ALT+Click** any method/class/symbol in Xcode's text editor.
-
 ## Overview
 
 This plugin allows you to use [Dash](http://kapeli.com/dash/) instead of Xcode's own documentation viewer when using option-click (or the equivalent keyboard shortcut) to view the documentation for the selected symbol.
@@ -21,6 +16,11 @@ If you want to use Xcode's built-in documentation popover again, you can tempora
 If you like reading Apple's documentation, you might also like my [iOS app DocSets](https://github.com/omz/DocSets-for-iOS) for reading on your iPad or iPhone, even if you have no internet connection.
 
 I'm [@olemoritz](http://twitter.com/olemoritz) on Twitter.
+
+## Usage & Installation
+
+1. Download the source, build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
+2. To use - **ALT+Click** any method/class/symbol in Xcode's text editor.
 
 ## License
 
