@@ -11,7 +11,6 @@
 
 #define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
 #define kOMOpenInDashDisabled				@"OMOpenInDashDisabled"
-#define kOMDashSearchPlatform               @"OMDashSearchPlatform"
 #define kOMCopySelectorDisabled             @"OMCopySelectorOnCommandShiftDisabled"
 
 
@@ -36,10 +35,17 @@
 			return;
 		}
 		NSString *symbolString = [self valueForKeyPath:@"selectedExpression.symbolString"];
-		BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
-		if (!dashOpened) {
-			[self om_dashNotInstalledFallback];
-		}
+        if(symbolString.length)
+        {
+            BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
+            if (!dashOpened) {
+                [self om_dashNotInstalledFallback];
+            }
+        }
+        else
+        {
+            NSBeep();
+        }
 	}
 	@catch (NSException *exception) {
 
@@ -71,25 +77,22 @@
 		@try {
 			NSArray *linkRanges = [textView valueForKey:@"_temporaryLinkRanges"];
 			NSMutableString *searchString = [NSMutableString string];
-
-            // search options
-            NSString *searchPlatform = [[NSUserDefaults standardUserDefaults] stringForKey:kOMDashSearchPlatform];
-
-            if ([searchPlatform length] > 0) {
-                [searchString appendString:searchPlatform];
-                [searchString appendString:@":"];
-            }
-
-            // link
             for (NSValue *rangeValue in linkRanges) {
 				NSRange range = [rangeValue rangeValue];
 				NSString *stringFromRange = [textView.textStorage.string substringWithRange:range];
 				[searchString appendString:stringFromRange];
 			}
-			BOOL dashOpened = [self om_showQuickHelpForSearchString:searchString];
-			if (!dashOpened) {
-				[self om_dashNotInstalledFallback];
-			}
+            if(searchString.length)
+            {
+                BOOL dashOpened = [self om_showQuickHelpForSearchString:searchString];
+                if (!dashOpened) {
+                    [self om_dashNotInstalledFallback];
+                }
+            }
+            else
+            {
+                NSBeep();
+            }
 		}
 		@catch (NSException *exception) {
 
@@ -124,22 +127,79 @@
 
 - (BOOL)om_showQuickHelpForSearchString:(NSString *)searchString
 {
-	if (searchString.length == 0) {
-		NSBeep();
-    } else {
-        NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
+    searchString = [self om_appendActiveSchemeKeyword:searchString];
+	NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
+	[pboard setString:searchString forType:NSStringPboardType];
+	return NSPerformService(@"Look Up in Dash", pboard);
+}
 
-        [pboard setString:searchString forType:NSStringPboardType];
-
-        if (NSPerformService(@"Look Up in Dash", pboard)) {
-            return YES;
+- (NSString *)om_appendActiveSchemeKeyword:(NSString *)searchString
+{
+    @try { // I don't trust myself with this swizzling business
+        id windowController = [[NSApp keyWindow] windowController];
+        id workspace = [windowController valueForKey:@"_workspace"];
+        id runContextManager = [workspace valueForKey:@"runContextManager"];
+        id activeDestination = [runContextManager valueForKey:@"_activeRunDestination"];
+        NSString *destination = [activeDestination valueForKey:@"targetIdentifier"];
+        
+        if(destination && [destination isKindOfClass:[NSString class]] && destination.length)
+        {
+            destination = [destination lowercaseString];
+            BOOL iOS = [destination hasPrefix:@"iphone"] || [destination hasPrefix:@"ipad"] || [destination hasPrefix:@"ios"];
+            BOOL mac = [destination hasPrefix:@"mac"] || [destination hasPrefix:@"osx"];
+            if(iOS || mac)
+            {
+                NSUserDefaults *defaults = [[[NSUserDefaults alloc] init] autorelease];
+                [defaults addSuiteNamed:@"com.kapeli.dash"];
+                [defaults synchronize];
+                NSArray *docsets = [defaults objectForKey:@"docsets"];
+                docsets = [docsets sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+                    BOOL obj1Enabled = [[obj1 objectForKey:@"isProfileEnabled"] boolValue];
+                    BOOL obj2Enabled = [[obj2 objectForKey:@"isProfileEnabled"] boolValue];
+                    if(obj1Enabled && !obj2Enabled)
+                    {
+                        return NSOrderedAscending;
+                    }
+                    else if(!obj1Enabled && obj2Enabled)
+                    {
+                        return NSOrderedDescending;
+                    }
+                    else
+                    {
+                        return NSOrderedSame;
+                    }
+                }];
+                
+                NSString *foundKeyword = nil;
+                for(NSDictionary *docset in docsets)
+                {
+                    NSString *platform = [[docset objectForKey:@"platform"] lowercaseString];
+                    BOOL found = NO;
+                    if(iOS && ([platform hasPrefix:@"iphone"] || [platform hasPrefix:@"ios"]))
+                    {
+                        found = YES;
+                    }
+                    else if(mac && ([platform hasPrefix:@"macosx"] || [platform hasPrefix:@"osx"]))
+                    {
+                        found = YES;
+                    }
+                    if(found)
+                    {
+                        NSString *keyword = [docset objectForKey:@"keyword"];
+                        foundKeyword = (keyword && keyword.length) ? keyword : platform;
+                        break;
+                    }
+                }
+                if(foundKeyword)
+                {
+                    searchString = [[[foundKeyword stringByReplacingOccurrencesOfString:@":" withString:@""] stringByAppendingString:@":"] stringByAppendingString:searchString];
+                }
+                [defaults removeSuiteNamed:@"com.kapeli.dash"];
+            }
         }
-
-		if ([[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:[NSString stringWithFormat:@"dash://%@", searchString]]]) {
-            return YES;
-        }
-	}
-    return NO;
+    }
+    @catch (NSException *exception) { }
+    return searchString;
 }
 
 @end
@@ -166,12 +226,6 @@
 {
 	self  = [super init];
 	if (self) {
-        NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-
-        if ([userDefaults stringForKey:kOMDashSearchPlatform] == nil) {
-            [userDefaults setObject:@"" forKey:kOMDashSearchPlatform];
-        }
-
 		//TODO: It would be better to add this to the Help menu, but that seems to be populated from somewhere else...
 		NSMenuItem *editMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
 		if (editMenuItem) {
@@ -185,87 +239,6 @@
 
             [[editMenuItem submenu] addItem:toggleDashItem];
             [toggleDashItem release];
-
-            // search options menu items
-            NSMenuItem *searchPlatformsItem = [[NSMenuItem alloc] initWithTitle:@"Dash Search Platform"
-                                                                         action:NULL
-                                                                  keyEquivalent:@""];
-
-            [[editMenuItem submenu] addItem:searchPlatformsItem];
-            [searchPlatformsItem release];
-
-            NSMenu *searchOptionsMenu = [[NSMenu alloc] initWithTitle:@"Dash Search Options"];
-
-            [searchPlatformsItem setSubmenu:searchOptionsMenu];
-            [searchOptionsMenu release];
-
-            NSMenuItem *searchAllItem = [[NSMenuItem alloc] initWithTitle:@"All Platforms"
-                                                                   action:@selector(toggleSearchPlatform:)
-                                                            keyEquivalent:@""];
-
-            [searchAllItem setTarget:self];
-            [searchAllItem setRepresentedObject:@""];
-
-            [searchOptionsMenu addItem:searchAllItem];
-            [searchAllItem release];
-
-            NSArray *docsets = (NSArray *)CFPreferencesCopyAppValue((CFStringRef)@"docsets",
-                                                                    (CFStringRef)@"com.kapeli.dash");
-            NSMutableSet *platforms = [NSMutableSet set];
-
-            for (NSDictionary *docset in docsets) {
-                if (![docset isKindOfClass:[NSDictionary class]]) {
-                    continue;
-                }
-
-                NSString *platform = [docset objectForKey:@"platform"];
-
-                if ([platforms containsObject:platform]) {
-                    continue;
-                }
-
-                [platforms addObject:platform];
-
-                if (![platform isKindOfClass:[NSString class]]) {
-                    continue;
-                }
-
-                NSMenuItem *searchPlatformItem = [[NSMenuItem alloc] initWithTitle:platform
-                                                                            action:@selector(toggleSearchPlatform:)
-                                                                     keyEquivalent:@""];
-
-                [searchPlatformItem setTarget:self];
-                [searchPlatformItem setRepresentedObject:platform];
-
-                [searchOptionsMenu addItem:searchPlatformItem];
-                [searchPlatformItem release];
-            }
-
-            if (docsets != NULL) {
-                CFRelease(docsets);
-            }
-
-            if ([platforms count] == 0) {
-                NSMenuItem *searchiOSItem = [[NSMenuItem alloc] initWithTitle:@"iphoneos"
-                                                                       action:@selector(toggleSearchPlatform:)
-                                                                keyEquivalent:@""];
-
-                [searchiOSItem setTarget:self];
-                [searchiOSItem setRepresentedObject:@"iphoneos"];
-
-                [searchOptionsMenu addItem:searchiOSItem];
-                [searchiOSItem release];
-
-                NSMenuItem *searchOSXItem = [[NSMenuItem alloc] initWithTitle:@"macosx"
-                                                                       action:@selector(toggleSearchPlatform:)
-                                                                keyEquivalent:@""];
-
-                [searchOSXItem setTarget:self];
-                [searchOSXItem setRepresentedObject:@"macosx"];
-
-                [searchOptionsMenu addItem:searchOSXItem];
-                [searchOSXItem release];
-            }
 
             // toggle Copy selector on command-shift-click
             NSMenuItem *toggleCopySelectorItem = [[NSMenuItem alloc] initWithTitle:@"Copy Selector"
@@ -298,16 +271,6 @@
 			[menuItem setState:NSOnState];
 		}
 	}
-	else if (action == @selector(toggleSearchPlatform:)) {
-        NSString *searchPlatform = [[NSUserDefaults standardUserDefaults] stringForKey:kOMDashSearchPlatform];
-        id representedObject = [menuItem representedObject];
-
-        if ([searchPlatform isEqual:representedObject]) {
-			[menuItem setState:NSOnState];
-		} else {
-			[menuItem setState:NSOffState];
-		}
-	}
 
 	return YES;
 }
@@ -322,14 +285,6 @@
 {
 	BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMCopySelectorDisabled];
 	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMCopySelectorDisabled];
-}
-
-- (void)toggleSearchPlatform:(id)sender
-{
-    NSMenuItem *menuItem = (NSMenuItem *)sender;
-    id representedObject = [menuItem representedObject];
-    
-	[[NSUserDefaults standardUserDefaults] setObject:representedObject forKey:kOMDashSearchPlatform];
 }
 
 @end
