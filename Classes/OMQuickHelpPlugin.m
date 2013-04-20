@@ -11,6 +11,8 @@
 
 #define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
 #define kOMOpenInDashDisabled				@"OMOpenInDashDisabled"
+#define kOMCopySelectorDisabled             @"OMCopySelectorOnCommandShiftDisabled"
+
 
 @interface NSObject (OMSwizzledIDESourceCodeEditor)
 
@@ -46,7 +48,7 @@
         }
 	}
 	@catch (NSException *exception) {
-		
+
 	}
 }
 
@@ -69,11 +71,13 @@
 - (void)om_textView:(NSTextView *)textView didClickOnTemporaryLinkAtCharacterIndex:(unsigned long long)charIndex event:(NSEvent *)event isAltEvent:(BOOL)isAltEvent
 {
 	BOOL dashDisabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
+	BOOL copySelectorDisabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMCopySelectorDisabled];
+
 	if (isAltEvent && !dashDisabled) {
 		@try {
 			NSArray *linkRanges = [textView valueForKey:@"_temporaryLinkRanges"];
 			NSMutableString *searchString = [NSMutableString string];
-			for (NSValue *rangeValue in linkRanges) {
+            for (NSValue *rangeValue in linkRanges) {
 				NSRange range = [rangeValue rangeValue];
 				NSString *stringFromRange = [textView.textStorage.string substringWithRange:range];
 				[searchString appendString:stringFromRange];
@@ -91,8 +95,30 @@
             }
 		}
 		@catch (NSException *exception) {
-			
+
 		}
+	} else if (!copySelectorDisabled && !isAltEvent && ([event modifierFlags] & NSShiftKeyMask)) {
+        NSArray *linkRanges = [textView valueForKey:@"_temporaryLinkRanges"];
+        NSMutableString *selectorString = [NSMutableString string];
+
+        // link
+        for (NSValue *rangeValue in linkRanges) {
+            NSRange range = [rangeValue rangeValue];
+            NSString *stringFromRange = [textView.textStorage.string substringWithRange:range];
+            [selectorString appendString:stringFromRange];
+        }
+        
+        if ([selectorString length] > 0) {
+            NSPasteboard *pasteboard = [NSPasteboard generalPasteboard];
+            NSString *wrappedString = [NSString stringWithFormat:@"@selector(%@)", selectorString];
+            
+            [pasteboard clearContents];
+            [pasteboard writeObjects:[NSArray arrayWithObject:wrappedString]];
+        }
+        else {
+            //Preserve the default behavior for cmd-clicks:
+            [self om_textView:textView didClickOnTemporaryLinkAtCharacterIndex:charIndex event:event isAltEvent:isAltEvent];
+        }
 	} else {
 		//Preserve the default behavior for cmd-clicks:
 		[self om_textView:textView didClickOnTemporaryLinkAtCharacterIndex:charIndex event:event isAltEvent:isAltEvent];
@@ -184,13 +210,15 @@
 
 + (void)pluginDidLoad:(NSBundle *)plugin
 {
+    static OMQuickHelpPlugin *quickHelpPlugin = nil;
+
 	static dispatch_once_t onceToken;
 	dispatch_once(&onceToken, ^{
 		if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
 			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL];
 			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(textView:didClickOnTemporaryLinkAtCharacterIndex:event:isAltEvent:) withMethod:@selector(om_textView:didClickOnTemporaryLinkAtCharacterIndex:event:isAltEvent:) error:NULL];
 		}
-		[[self alloc] init];
+		quickHelpPlugin = [[self alloc] init];
 	});
 }
 
@@ -202,23 +230,48 @@
 		NSMenuItem *editMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
 		if (editMenuItem) {
 			[[editMenuItem submenu] addItem:[NSMenuItem separatorItem]];
-			NSMenuItem *toggleDashItem = [[[NSMenuItem alloc] initWithTitle:@"Open Quick Help in Dash" action:@selector(toggleOpenInDashEnabled:) keyEquivalent:@""] autorelease];
-			[toggleDashItem setTarget:self];
-			[[editMenuItem submenu] addItem:toggleDashItem];
-		}
+
+            // toggle Dash
+            NSMenuItem *toggleDashItem = [[NSMenuItem alloc] initWithTitle:@"Open Quick Help in Dash"
+                                                                    action:@selector(toggleOpenInDashEnabled:)
+                                                             keyEquivalent:@""];
+            [toggleDashItem setTarget:self];
+
+            [[editMenuItem submenu] addItem:toggleDashItem];
+            [toggleDashItem release];
+
+            // toggle Copy selector on command-shift-click
+            NSMenuItem *toggleCopySelectorItem = [[NSMenuItem alloc] initWithTitle:@"Copy Selector"
+                                                                            action:@selector(toggleCopySelectorEnabled:)
+                                                                     keyEquivalent:@""];
+            [toggleCopySelectorItem setTarget:self];
+
+            [[editMenuItem submenu] addItem:toggleCopySelectorItem];
+            [toggleCopySelectorItem release];
+        }
 	}
 	return self;
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
 {
-	if ([menuItem action] == @selector(toggleOpenInDashEnabled:)) {
+    SEL action = [menuItem action];
+
+	if (action == @selector(toggleOpenInDashEnabled:)) {
 		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled]) {
 			[menuItem setState:NSOffState];
 		} else {
 			[menuItem setState:NSOnState];
 		}
 	}
+	else if (action == @selector(toggleCopySelectorEnabled:)) {
+		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMCopySelectorDisabled]) {
+			[menuItem setState:NSOffState];
+		} else {
+			[menuItem setState:NSOnState];
+		}
+	}
+
 	return YES;
 }
 
@@ -226,6 +279,12 @@
 {
 	BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
 	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMOpenInDashDisabled];
+}
+
+- (void)toggleCopySelectorEnabled:(id)sender
+{
+	BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMCopySelectorDisabled];
+	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMCopySelectorDisabled];
 }
 
 @end
