@@ -22,6 +22,11 @@ I'm [@olemoritz](http://twitter.com/olemoritz) on Twitter.
 1. Download the source, build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
 2. To use - **Option-Click** any method/class/symbol in Xcode's text editor.
 
+## Automatic Platform Detection
+The plugin can use Xcode's current active scheme to determine which docset to search (iOS or OS X). Using this feature, ONLY the iOS or OS X docsets will be searched, so you might not want this if, for example, you also want to search the Cocos2D docset.
+
+To enable automatic platform detection, go to Edit > Dash Integration > Enable Dash Platform Detection in Xcode's menu (after you installed the plugin).
+
 ## License
 
     Copyright (c) 2012, Ole Zorn

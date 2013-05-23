@@ -11,7 +11,7 @@
 
 #define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
 #define kOMOpenInDashDisabled				@"OMOpenInDashDisabled"
-#define kOMDashPlatformDetectionDisabled    @"OMDashPlatformDetectionDisabled"
+#define kOMDashPlatformDetectionEnabled    @"OMDashPlatformDetectionEnabled"
 
 @interface NSObject (OMSwizzledIDESourceCodeEditor)
 
@@ -110,7 +110,7 @@
 
 - (NSString *)om_appendActiveSchemeKeyword:(NSString *)searchString
 {
-    if(![[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionDisabled])
+    if([[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionEnabled])
     {
         @try { // I don't trust myself with this swizzling business
             id windowController = [[NSApp keyWindow] windowController];
@@ -229,10 +229,10 @@
 		}
 	}
     else if([menuItem action] == @selector(toggleDashPlatformDetection:)) {
-		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionDisabled]) {
-			[menuItem setState:NSOffState];
-		} else {
+		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionEnabled]) {
 			[menuItem setState:NSOnState];
+		} else {
+			[menuItem setState:NSOffState];
 		}
 	}
 	return YES;
@@ -246,8 +246,8 @@
 
 - (void)toggleDashPlatformDetection:(id)sender
 {
-    BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionDisabled];
-	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMDashPlatformDetectionDisabled];
+    BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionEnabled];
+	[[NSUserDefaults standardUserDefaults] setBool:!enabled forKey:kOMDashPlatformDetectionEnabled];
 }
 
 @end
