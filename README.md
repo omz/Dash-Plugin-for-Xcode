@@ -20,7 +20,7 @@ I'm [@olemoritz](http://twitter.com/olemoritz) on Twitter.
 ## Usage & Installation
 
 1. Download the source, build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
-2. To use - **Option-Click** any method/class/symbol in Xcode's text editor.
+2. To use - **Option-Click** any method/class/symbol in Xcode's text editor. If you prefer the keyboard, set up a shortcut in Xcode's Preferences > Key Bindings for **Quick Help for Selected Item**.
 
 ## Automatic Platform Detection
 The plugin can use Xcode's current active scheme to determine which docset to search (iOS or OS X). Using this feature, ONLY the iOS or OS X docsets will be searched, so you might not want this if, for example, you also want to search the Cocos2D docset.
