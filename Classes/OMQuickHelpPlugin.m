@@ -15,7 +15,6 @@
 
 @interface NSObject (OMSwizzledIDESourceCodeEditor)
 
-- (void)om_textView:(id)arg1 didClickOnTemporaryLinkAtCharacterIndex:(unsigned long long)arg2 event:(id)arg3 isAltEvent:(BOOL)arg4;
 - (void)om_showQuickHelp:(id)sender;
 - (void)om_dashNotInstalledFallback;
 - (BOOL)om_showQuickHelpForSearchString:(NSString *)searchString;
@@ -64,39 +63,6 @@
 		if ([[alert suppressionButton] state] == NSOnState) {
 			[[NSUserDefaults standardUserDefaults] setBool:YES forKey:kOMSuppressDashNotInstalledWarning];
 		}
-	}
-}
-
-- (void)om_textView:(NSTextView *)textView didClickOnTemporaryLinkAtCharacterIndex:(unsigned long long)charIndex event:(NSEvent *)event isAltEvent:(BOOL)isAltEvent
-{
-	BOOL dashDisabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
-	if (isAltEvent && !dashDisabled) {
-		@try {
-			NSArray *linkRanges = [textView valueForKey:@"_temporaryLinkRanges"];
-			NSMutableString *searchString = [NSMutableString string];
-			for (NSValue *rangeValue in linkRanges) {
-				NSRange range = [rangeValue rangeValue];
-				NSString *stringFromRange = [textView.textStorage.string substringWithRange:range];
-				[searchString appendString:stringFromRange];
-			}
-            if(searchString.length)
-            {
-                BOOL dashOpened = [self om_showQuickHelpForSearchString:searchString];
-                if (!dashOpened) {
-                    [self om_dashNotInstalledFallback];
-                }
-            }
-            else
-            {
-                NSBeep();
-            }
-		}
-		@catch (NSException *exception) {
-			
-		}
-	} else {
-		//Preserve the default behavior for cmd-clicks:
-		[self om_textView:textView didClickOnTemporaryLinkAtCharacterIndex:charIndex event:event isAltEvent:isAltEvent];
 	}
 }
 
@@ -192,7 +158,6 @@
 	dispatch_once(&onceToken, ^{
 		if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
 			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL];
-			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(textView:didClickOnTemporaryLinkAtCharacterIndex:event:isAltEvent:) withMethod:@selector(om_textView:didClickOnTemporaryLinkAtCharacterIndex:event:isAltEvent:) error:NULL];
 		}
 		[[self alloc] init];
 	});
