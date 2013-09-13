@@ -83,11 +83,27 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
         // Dismiss the quick help popup
         [[self valueForKey:@"quickHelpController"] performSelector:@selector(closeQuickHelp)];
 
-        // Search Dash using the link's target, the last path component,
-        // which is the symbol clicked on, or the name of the reference page that should be opened.
-        // This works both for "reference" links (at the bottom of the quick help popup)
-        // and for links elsewhere.
-        NSString *searchString = [linkURLString lastPathComponent];
+        // Determine the search string to pass to Dash from the docset URL, depending on the type of document.
+        NSString *searchString = nil;
+        static NSRegularExpression *docTypeExpression = nil;
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            docTypeExpression = [[NSRegularExpression alloc] initWithPattern:@"apple_ref\\/(.+?)\\/" options:0 error:NULL];
+        });
+        NSTextCheckingResult *match = [docTypeExpression firstMatchInString:linkURLString options:0 range:NSMakeRange(0, [linkURLString length])];
+        if (match) {
+            NSString *docType = [linkURLString substringWithRange:[match rangeAtIndex:1]];
+            if ([docType isEqualToString:@"doc"]) {
+                // this document is release notes, or a technical note, etc., whose title is given by the link's label
+                searchString = [[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkLabel"];
+                // we must remove spaces from the name for how Dash searches (a space initiates "Find in Page" search)
+                searchString = [searchString stringByReplacingOccurrencesOfString:@" " withString:@""];
+            } else {
+                // this document is an API reference, for which the most accurate search string is the last path component of the URL
+                // --the symbol clicked on, or the name of the reference page to be opened
+                searchString = [linkURLString lastPathComponent];
+            }
+        }
         if([searchString length])
         {
             BOOL dashOpened = [self om_showQuickHelpForSearchString:searchString];
