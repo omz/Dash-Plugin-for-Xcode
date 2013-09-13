@@ -13,6 +13,4 @@
 	
 }
 
-- (void)toggleOpenInDashEnabled:(id)sender;
-
 @end

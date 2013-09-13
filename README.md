@@ -11,7 +11,9 @@ While you could also use Dash's "Look up in Dash" Services menu item, this is be
 * You don't have to select the entire symbol that you want to look up.
 * It automatically detects your active scheme (iOS or Mac) and searches only the active scheme's docset
 
-If you want to use Xcode's built-in documentation popover again, you can temporarily disable the Dash integration using the "Enable Dash Quick Help" item in the "Edit" menu.
+This plugin also gives you the option of using Xcode's "Quick Help" popup and only opening Dash, instead of Xcode's full documentation viewer, when you click a link in that popup.
+
+If you want to use Xcode's built-in documentation popover again, you can temporarily disable the Dash integration by clicking "Dash Integration > Style > Disabled" in the "Edit" menu.
 
 If you like reading Apple's documentation, you might also like my [iOS app DocSets](https://github.com/omz/DocSets-for-iOS) for reading on your iPad or iPhone, even if you have no internet connection.
 
