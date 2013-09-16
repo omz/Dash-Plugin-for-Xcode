@@ -21,16 +21,19 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
                                                     // in the popup is clicked)
 };
 
-@interface NSObject (OMSwizzledIDESourceCodeEditor)
+@interface NSObject (OMSwizzledMethods)
 
 - (void)om_showQuickHelp:(id)sender;
 - (void)om_handleLinkClickWithActionInformation:(id)info;
 - (void)om_dashNotInstalledFallback;
 - (BOOL)om_showQuickHelpForSearchString:(NSString *)searchString;
+- (BOOL)om_shouldHandleLinkClickWithActionInformation:(id)info;
+- (NSURL *)om_dashURLFromQuickHelpLinkActionInformation:(id)info;
+- (BOOL)om_showQuickHelpForDashURL:(NSURL *)docsetURL;
 
 @end
 
-@implementation NSObject (OMSwizzledIDESourceCodeEditor)
+@implementation NSObject (OMSwizzledMethods)
 
 - (void)om_showQuickHelp:(id)sender
 {
@@ -71,10 +74,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 // (as opposed to a source file).
 - (void)om_handleLinkClickWithActionInformation:(id)info {
     @try {
-        OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
-        NSString *linkURLString = [[[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkURL"] absoluteString];
-        BOOL linkOpensReference = [linkURLString rangeOfString:@".docset"].location != NSNotFound;
-        if ((dashStyle != OMQuickHelpPluginIntegrationStyleReference) || !linkOpensReference) {
+        if (![self om_shouldHandleLinkClickWithActionInformation:info]) {
             //No, this is not an infinite loop because the method is swizzled:
             [self om_handleLinkClickWithActionInformation:info];
             return;
@@ -83,30 +83,9 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
         // Dismiss the quick help popup
         [[self valueForKey:@"quickHelpController"] performSelector:@selector(closeQuickHelp)];
 
-        // Determine the search string to pass to Dash from the docset URL, depending on the type of document.
-        NSString *searchString = nil;
-        static NSRegularExpression *docTypeExpression = nil;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            docTypeExpression = [[NSRegularExpression alloc] initWithPattern:@"apple_ref\\/(.+?)\\/" options:0 error:NULL];
-        });
-        NSTextCheckingResult *match = [docTypeExpression firstMatchInString:linkURLString options:0 range:NSMakeRange(0, [linkURLString length])];
-        if (match) {
-            NSString *docType = [linkURLString substringWithRange:[match rangeAtIndex:1]];
-            if ([docType isEqualToString:@"doc"]) {
-                // this document is release notes, or a technical note, etc., whose title is given by the link's label
-                searchString = [[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkLabel"];
-                // we must remove spaces from the name for how Dash searches (a space initiates "Find in Page" search)
-                searchString = [searchString stringByReplacingOccurrencesOfString:@" " withString:@""];
-            } else {
-                // this document is an API reference, for which the most accurate search string is the last path component of the URL
-                // --the symbol clicked on, or the name of the reference page to be opened
-                searchString = [linkURLString lastPathComponent];
-            }
-        }
-        if([searchString length])
-        {
-            BOOL dashOpened = [self om_showQuickHelpForSearchString:searchString];
+        NSURL *dashURL = [self om_dashURLFromQuickHelpLinkActionInformation:info];
+        if (dashURL) {
+            BOOL dashOpened = [self om_showQuickHelpForDashURL:dashURL];
             if (!dashOpened) {
                 [self om_dashNotInstalledFallback];
             }
@@ -143,6 +122,68 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 	NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
 	[pboard setString:searchString forType:NSStringPboardType];
 	return NSPerformService(@"Look Up in Dash", pboard);
+}
+
+- (BOOL)om_shouldHandleLinkClickWithActionInformation:(id)info {
+    OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
+    if (dashStyle != OMQuickHelpPluginIntegrationStyleReference) return NO;
+
+    NSString *linkURLString = [[[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkURL"] absoluteString];
+    BOOL linkOpensReference = [linkURLString rangeOfString:@".docset"].location != NSNotFound;
+    return linkOpensReference;
+}
+
+- (NSURL *)om_dashURLFromQuickHelpLinkActionInformation:(id)info {
+    NSURL *linkURL = [[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkURL"];
+    NSString *linkURLString = [linkURL absoluteString];
+
+    // Determine the type of the result, e.g. "Class" (cl)
+    NSString *resultType = nil;
+    static NSRegularExpression *typeExpression = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        typeExpression = [[NSRegularExpression alloc] initWithPattern:@"apple_ref\\/.+?\\/(.+?)\\/" options:0 error:NULL];
+    });
+    NSTextCheckingResult *match = [typeExpression firstMatchInString:linkURLString options:0 range:NSMakeRange(0, [linkURLString length])];
+    if (match) {
+        resultType = [linkURLString substringWithRange:[match rangeAtIndex:1]];
+    } else {
+        return nil;
+    }
+
+    // Determine the name of the result/page to show, e.g. "NSAlert"
+    NSString *resultName = nil;
+    if ([resultType isEqualToString:@"uid"]) {
+        // this document is release notes, or a technical note, etc., whose name is given by the link's label
+        resultName = [[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkLabel"];
+        // we must remove spaces from the name for how Dash searches (a space initiates "Find in Page" search)
+        resultName = [resultName stringByReplacingOccurrencesOfString:@" " withString:@""];
+
+        // change the result type to "doc" so that Dash uses the proper icon
+        resultType = @"doc";
+    } else {
+        // this document is an API reference, for which the most accurate name is the last path component of the URL
+        // --the symbol clicked on, or the name of the reference page to be opened
+        resultName = [linkURLString lastPathComponent];
+    }
+
+    // Determine the path to open
+    // take everything after "file://" so that we include the fragment (the in-page link)
+    NSString *resultPath = [linkURLString substringFromIndex:[@"file://" length]];
+
+    // Build the Dash URL
+    // Given this URL, what Dash will do (per @kapeli) is:
+    //
+    //     1. Perform a regular search for the result using the currently enabled docsets
+    //     2. Search for a result that matches the path
+    //     3. If a result is found, that result is prioritised and it appears as the top result
+    //     4. If a result with that path is not found, a fake result will be added to the top
+    //
+    return [NSURL URLWithString:[NSString stringWithFormat:@"dash-advanced://%@/%@/%@", resultName, resultType, resultPath]];
+}
+
+- (BOOL)om_showQuickHelpForDashURL:(NSURL *)dashURL {
+    return [[NSWorkspace sharedWorkspace] openURL:dashURL];
 }
 
 - (NSString *)om_appendActiveSchemeKeyword:(NSString *)searchString

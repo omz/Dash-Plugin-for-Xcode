@@ -11,7 +11,7 @@ While you could also use Dash's "Look up in Dash" Services menu item, this is be
 * You don't have to select the entire symbol that you want to look up.
 * It automatically detects your active scheme (iOS or Mac) and searches only the active scheme's docset
 
-This plugin also gives you the option of using Xcode's "Quick Help" popup and only opening Dash, instead of Xcode's full documentation viewer, when you click a link in that popup.
+This plugin also gives you the option of using Xcode's "Quick Help" popup and only opening Dash, instead of Xcode's full documentation viewer, when you click a link in that popup. If you use this option, Dash will be able to disambiguate between similar results (e.g. clicking on `boolValue` in something like `[foo boolValue]`, where `foo` is an `NSString *`, will open the page for `-[NSString boolValue]` vs. `-[NSNumber boolValue]`) and even find a result if a simple text search were to fail.
 
 If you want to use Xcode's built-in documentation popover again, you can temporarily disable the Dash integration by clicking "Dash Integration > Style > Disabled" in the "Edit" menu.
 
