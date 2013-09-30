@@ -295,30 +295,48 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
             NSMenu *dashMenu = [[[NSMenu alloc] init] autorelease];
             [dashMenuItem setSubmenu:dashMenu];
 
-            NSMenuItem *styleItem = [[[NSMenuItem alloc] initWithTitle:@"Style" action:nil keyEquivalent:@""] autorelease];
-            // the title here isn't shown to the user,
-            // but is used to distinguish this menu's items in `validateMenuItem:` below
-            NSMenu *styleMenu = [[[NSMenu alloc] initWithTitle:styleItem.title] autorelease];
-            [styleItem setSubmenu:styleMenu];
+            /*
+             Create a menu looking like:
+             
+             Disabled
+             Replace Quick Help
+             Replace Reference
+             ————————————— (separator item)
+             Advanced
+             — Enable Dash Platform Detection (in a submenu of Advanced)
+             */
 
-            NSMenuItem *disabledStyleItem = [styleMenu addItemWithTitle:@"Disabled" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
+            NSMutableSet *integrationStyleMenuItems = [[[NSMutableSet alloc] init] autorelease];
+
+            NSMenuItem *disabledStyleItem = [dashMenu addItemWithTitle:@"Disabled" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
             disabledStyleItem.tag = OMQuickHelpPluginIntegrationStyleDisabled;
             [disabledStyleItem setTarget:self];
-			NSMenuItem *quickHelpStyleItem = [styleMenu addItemWithTitle:@"Replace Quick Help" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
+            [integrationStyleMenuItems addObject:disabledStyleItem];
+
+			NSMenuItem *quickHelpStyleItem = [dashMenu addItemWithTitle:@"Replace Quick Help" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
             quickHelpStyleItem.tag = OMQuickHelpPluginIntegrationStyleQuickHelp;
             [quickHelpStyleItem setTarget:self];
-            NSMenuItem *referenceStyleItem = [styleMenu addItemWithTitle:@"Replace Reference" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
+            [integrationStyleMenuItems addObject:quickHelpStyleItem];
+
+            NSMenuItem *referenceStyleItem = [dashMenu addItemWithTitle:@"Replace Reference" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
             referenceStyleItem.tag = OMQuickHelpPluginIntegrationStyleReference;
             [referenceStyleItem setTarget:self];
+            [integrationStyleMenuItems addObject:referenceStyleItem];
 
             // the default menu option should be to replace the quick help popup
             if (![[NSUserDefaults standardUserDefaults] objectForKey:kOMOpenInDashStyle]) {
                 [[NSUserDefaults standardUserDefaults] setInteger:OMQuickHelpPluginIntegrationStyleQuickHelp forKey:kOMOpenInDashStyle];
             }
 
-            [dashMenu addItem:styleItem];
+            _integrationStyleMenuItems = [integrationStyleMenuItems copy];
 
-            NSMenuItem *togglePlatformDetection = [dashMenu addItemWithTitle:@"Enable Dash Platform Detection" action:@selector(toggleDashPlatformDetection:) keyEquivalent:@""];
+            [dashMenu addItem:[NSMenuItem separatorItem]];
+
+            NSMenuItem *advancedMenuItem = [dashMenu addItemWithTitle:@"Advanced" action:nil keyEquivalent:@""];
+            NSMenu *advancedMenu = [[[NSMenu alloc] init] autorelease];
+            [advancedMenuItem setSubmenu:advancedMenu];
+
+            NSMenuItem *togglePlatformDetection = [advancedMenu addItemWithTitle:@"Enable Dash Platform Detection" action:@selector(toggleDashPlatformDetection:) keyEquivalent:@""];
             [togglePlatformDetection setTarget:self];
 
 			[[editMenuItem submenu] addItem:dashMenuItem];
@@ -329,7 +347,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
 {
-	if ([[[menuItem menu] title] isEqualToString:@"Style"]) {
+	if ([_integrationStyleMenuItems containsObject:menuItem]) {
         OMQuickHelpPluginIntegrationStyle selectedStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
         [menuItem setState:(menuItem.tag == selectedStyle) ? NSOnState : NSOffState];
 	}
