@@ -11,8 +11,6 @@ While you could also use Dash's "Look up in Dash" Services menu item, this is be
 * You don't have to select the entire symbol that you want to look up.
 * It automatically detects your active scheme (iOS or Mac) and searches only the active scheme's docset
 
-This plugin also gives you the option of using Xcode's "Quick Help" popup and only opening Dash, instead of Xcode's full documentation viewer, when you click a link in that popup. If you use this option, Dash will be able to disambiguate between similar results (e.g. clicking on `boolValue` in something like `[foo boolValue]`, where `foo` is an `NSString *`, will open the page for `-[NSString boolValue]` vs. `-[NSNumber boolValue]`) and even find a result if a simple text search were to fail.
-
 If you want to use Xcode's built-in documentation popover again, you can temporarily disable the Dash integration by clicking "Dash Integration > Disabled" in the "Edit" menu.
 
 If you like reading Apple's documentation, you might also like my [iOS app DocSets](https://github.com/omz/DocSets-for-iOS) for reading on your iPad or iPhone, even if you have no internet connection.
@@ -23,6 +21,9 @@ I'm [@olemoritz](http://twitter.com/olemoritz) on Twitter.
 
 1. Download the source, build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
 2. To use - **Option-Click** any method/class/symbol in Xcode's text editor. If you prefer the keyboard, set up a shortcut in Xcode's Preferences > Key Bindings for **Quick Help for Selected Item**.
+3. If you select "Dash Integration > Replace Reference" in the "Edit" menu, Dash will only open when you click a link in the "Quick Help" popup.
+
+If you choose "Replace Reference", Dash will be able to disambiguate between similar results (e.g. clicking on `boolValue` in something like `[foo boolValue]`, where `foo` is an `NSString *`, will open the page for `-[NSString boolValue]` vs. `-[NSNumber boolValue]`) and even find a result if a simple text search were to fail.
 
 ## Automatic Platform Detection
 The plugin can use Xcode's current active scheme to determine which docset to search (iOS or OS X). Using this feature, ONLY the iOS or OS X docsets will be searched, so you might not want this if, for example, you also want to search the Cocos2D docset.
