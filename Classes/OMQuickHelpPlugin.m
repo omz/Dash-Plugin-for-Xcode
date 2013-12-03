@@ -92,7 +92,7 @@
                 BOOL mac = [destination hasPrefix:@"mac"] || [destination hasPrefix:@"osx"];
                 if(iOS || mac)
                 {
-                    NSUserDefaults *defaults = [[[NSUserDefaults alloc] init] autorelease];
+                    NSUserDefaults *defaults = [[NSUserDefaults alloc] init];
                     [defaults addSuiteNamed:@"com.kapeli.dash"];
                     [defaults synchronize];
                     NSArray *docsets = [defaults objectForKey:@"docsets"];
@@ -171,8 +171,8 @@
 		NSMenuItem *editMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
 		if (editMenuItem) {
 			[[editMenuItem submenu] addItem:[NSMenuItem separatorItem]];
-			NSMenuItem *dashMenuItem = [[[NSMenuItem alloc] initWithTitle:@"Dash Integration" action:nil keyEquivalent:@""] autorelease];
-            NSMenu *dashMenu = [[[NSMenu alloc] init] autorelease];
+			NSMenuItem *dashMenuItem = [[NSMenuItem alloc] initWithTitle:@"Dash Integration" action:nil keyEquivalent:@""];
+            NSMenu *dashMenu = [[NSMenu alloc] init];
             [dashMenuItem setSubmenu:dashMenu];
 			NSMenuItem *toggleDashItem = [dashMenu addItemWithTitle:@"Enable Dash Quick Help" action:@selector(toggleOpenInDashEnabled:) keyEquivalent:@""];
             [toggleDashItem setTarget:self];
