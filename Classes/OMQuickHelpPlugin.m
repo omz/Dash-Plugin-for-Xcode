@@ -204,7 +204,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
                 BOOL mac = [destination hasPrefix:@"mac"] || [destination hasPrefix:@"osx"];
                 if(iOS || mac)
                 {
-                    NSUserDefaults *defaults = [[[NSUserDefaults alloc] init] autorelease];
+                    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
                     [defaults addSuiteNamed:@"com.kapeli.dash"];
                     [defaults synchronize];
                     NSArray *docsets = [defaults objectForKey:@"docsets"];
@@ -267,6 +267,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 + (void)pluginDidLoad:(NSBundle *)plugin
 {
 	static dispatch_once_t onceToken;
+    static id quickHelpPlugin = nil;
 	dispatch_once(&onceToken, ^{
 		if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
 			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL];
@@ -276,9 +277,8 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 		if (quickHelpControllerClass) {
 		    [quickHelpControllerClass jr_swizzleMethod:@selector(handleLinkClickWithActionInformation:)
 		                                    withMethod:@selector(om_handleLinkClickWithActionInformation:) error:NULL];
+            quickHelpPlugin = [[self alloc] init];
 		}
-
-		[[self alloc] init];
 	});
 }
 
@@ -291,8 +291,8 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 		if (editMenuItem) {
 			[[editMenuItem submenu] addItem:[NSMenuItem separatorItem]];
 
-			NSMenuItem *dashMenuItem = [[[NSMenuItem alloc] initWithTitle:@"Dash Integration" action:nil keyEquivalent:@""] autorelease];
-            NSMenu *dashMenu = [[[NSMenu alloc] init] autorelease];
+            NSMenu *dashMenu = [[NSMenu alloc] init];
+			NSMenuItem *dashMenuItem = [[editMenuItem submenu] addItemWithTitle:@"Dash Integration" action:nil keyEquivalent:@""];
             [dashMenuItem setSubmenu:dashMenu];
 
             /*
@@ -306,7 +306,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
              — Enable Dash Platform Detection (in a submenu of Advanced)
              */
 
-            NSMutableSet *integrationStyleMenuItems = [[[NSMutableSet alloc] init] autorelease];
+            NSMutableSet *integrationStyleMenuItems = [NSMutableSet set];
 
             NSMenuItem *disabledStyleItem = [dashMenu addItemWithTitle:@"Disabled" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
             disabledStyleItem.tag = OMQuickHelpPluginIntegrationStyleDisabled;
@@ -333,13 +333,11 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
             [dashMenu addItem:[NSMenuItem separatorItem]];
 
             NSMenuItem *advancedMenuItem = [dashMenu addItemWithTitle:@"Advanced" action:nil keyEquivalent:@""];
-            NSMenu *advancedMenu = [[[NSMenu alloc] init] autorelease];
+            NSMenu *advancedMenu = [[NSMenu alloc] init];
             [advancedMenuItem setSubmenu:advancedMenu];
 
             NSMenuItem *togglePlatformDetection = [advancedMenu addItemWithTitle:@"Enable Dash Platform Detection" action:@selector(toggleDashPlatformDetection:) keyEquivalent:@""];
             [togglePlatformDetection setTarget:self];
-
-			[[editMenuItem submenu] addItem:dashMenuItem];
 		}
 	}
 	return self;
