@@ -2,16 +2,15 @@
 
 ## Overview
 
-This plugin allows you to use [Dash](http://kapeli.com/dash/) instead of Xcode's own documentation viewer when using **Option-Click** (or the equivalent keyboard shortcut) to view the documentation for the selected symbol.
+This plugin allows you to use [Dash](http://kapeli.com/dash/) instead of Xcode's own documentation viewer when using **Option-Click** (or the equivalent keyboard shortcut) to view the documentation for the selected symbol. If you like the default Xcode quick help popover, you can still use it and make the links inside the popover open up in Dash instead.
 
 While you could also use Dash's "Look up in Dash" Services menu item, this is better in several ways:
 
 * It's smart about looking up symbols that are split across multiple ranges (e.g. **Option-Clicking** on `foo:` in something like `[self foo:x withBar:y andBaz:z]` searches for `foo:withBar:andBaz:` instead of just `foo:`).
 * It's faster to use with the mouse, and the keyboard shortcut can be set directly in Xcode's preferences.
 * You don't have to select the entire symbol that you want to look up.
-* It automatically detects your active scheme (iOS or Mac) and searches only the active scheme's docset
 
-If you want to use Xcode's built-in documentation popover again, you can temporarily disable the Dash integration by clicking "Dash Integration > Disabled" in the "Edit" menu.
+If you want to use Xcode's built-in documentation popover again, you can temporarily disable the Dash integration by clicking "Dash Integration > Disabled or Replace Reference" in the "Edit" menu.
 
 If you like reading Apple's documentation, you might also like my [iOS app DocSets](https://github.com/omz/DocSets-for-iOS) for reading on your iPad or iPhone, even if you have no internet connection.
 
@@ -20,10 +19,9 @@ I'm [@olemoritz](http://twitter.com/olemoritz) on Twitter.
 ## Usage & Installation
 
 1. Download the source, build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
-2. To use - **Option-Click** any method/class/symbol in Xcode's text editor. If you prefer the keyboard, set up a shortcut in Xcode's Preferences > Key Bindings for **Quick Help for Selected Item**.
-3. If you select "Dash Integration > Replace Reference" in the "Edit" menu, Dash will only open when you click a link in the "Quick Help" popup.
-
-If you choose "Replace Reference", Dash will be able to disambiguate between similar results (e.g. clicking on `boolValue` in something like `[foo boolValue]`, where `foo` is an `NSString *`, will open the page for `-[NSString boolValue]` vs. `-[NSNumber boolValue]`) and even find a result if a simple text search were to fail.
+2. To use - **Option-Click** any method/class/symbol in Xcode's text editor. 
+3. If you prefer the keyboard, set up a shortcut in Xcode's Preferences > Key Bindings for **Quick Help for Selected Item**.
+4. If you select "Dash Integration > Replace Reference" in the "Edit" menu, Dash will only open when you click a link in the "Quick Help" popover.
 
 ## Automatic Platform Detection
 The plugin can use Xcode's current active scheme to determine which docset to search (iOS or OS X). Using this feature, ONLY the iOS or OS X docsets will be searched, so you might not want this if, for example, you also want to search the Cocos2D docset.
