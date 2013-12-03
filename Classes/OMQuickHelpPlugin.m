@@ -155,11 +155,12 @@
 + (void)pluginDidLoad:(NSBundle *)plugin
 {
 	static dispatch_once_t onceToken;
+    static id quickHelpPlugin = nil;
 	dispatch_once(&onceToken, ^{
 		if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
 			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL];
+            quickHelpPlugin = [[self alloc] init];
 		}
-		[[self alloc] init];
 	});
 }
 
