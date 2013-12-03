@@ -10,34 +10,53 @@
 #import "JRSwizzle.h"
 
 #define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
-#define kOMOpenInDashDisabled				@"OMOpenInDashDisabled"
+#define kOMOpenInDashStyle                  @"OMOpenInDashStyle"
 #define kOMDashPlatformDetectionEnabled    @"OMDashPlatformDetectionEnabled"
 
-@interface NSObject (OMSwizzledIDESourceCodeEditor)
+typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
+    OMQuickHelpPluginIntegrationStyleDisabled = 0,  // Disable this plugin altogether
+    OMQuickHelpPluginIntegrationStyleQuickHelp,     // Search Dash instead of showing the "Quick Help" popup
+    OMQuickHelpPluginIntegrationStyleReference      // Show the "Quick Help" popup, but search Dash instead
+                                                    // of showing Xcode's documentation viewer (when the "Reference" link
+                                                    // in the popup is clicked)
+};
+
+@interface NSObject (OMSwizzledMethods)
 
 - (void)om_showQuickHelp:(id)sender;
+- (void)om_handleLinkClickWithActionInformation:(id)info;
 - (void)om_dashNotInstalledFallback;
 - (BOOL)om_showQuickHelpForSearchString:(NSString *)searchString;
+- (BOOL)om_shouldHandleLinkClickWithActionInformation:(id)info;
+- (NSURL *)om_dashURLFromQuickHelpLinkActionInformation:(id)info;
+- (BOOL)om_showQuickHelpForDashURL:(NSURL *)docsetURL;
 
 @end
 
-@implementation NSObject (OMSwizzledIDESourceCodeEditor)
+@implementation NSObject (OMSwizzledMethods)
 
 - (void)om_showQuickHelp:(id)sender
 {
 	@try {
-		BOOL dashDisabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
-		if (dashDisabled) {
-			//No, this is not an infinite loop because the method is swizzled:
-			[self om_showQuickHelp:sender];
-			return;
+        OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
+        if (dashStyle == OMQuickHelpPluginIntegrationStyleDisabled) {
+            //No, this is not an infinite loop because the method is swizzled:
+            [self om_showQuickHelp:sender];
+            return;
 		}
 		NSString *symbolString = [self valueForKeyPath:@"selectedExpression.symbolString"];
         if(symbolString.length)
         {
-            BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
-            if (!dashOpened) {
-                [self om_dashNotInstalledFallback];
+            if (dashStyle == OMQuickHelpPluginIntegrationStyleQuickHelp) {
+                BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
+                if (!dashOpened) {
+                    [self om_dashNotInstalledFallback];
+                }
+            } else {
+                // Show regular quick help--wait to search Dash until the user clicks on a link
+                // this is not an infinite loop because the method is swizzled:
+                [self om_showQuickHelp:sender];
+                return;
             }
         }
         else
@@ -48,6 +67,37 @@
 	@catch (NSException *exception) {
 		
 	}
+}
+
+// The quick help popup is actually a web view, and the links are actual links.
+// We examine the URL of any link clicked to see whether Xcode is trying to open a docset page
+// (as opposed to a source file).
+- (void)om_handleLinkClickWithActionInformation:(id)info {
+    @try {
+        if (![self om_shouldHandleLinkClickWithActionInformation:info]) {
+            //No, this is not an infinite loop because the method is swizzled:
+            [self om_handleLinkClickWithActionInformation:info];
+            return;
+        }
+
+        // Dismiss the quick help popup
+        [[self valueForKey:@"quickHelpController"] performSelector:@selector(closeQuickHelp)];
+
+        NSURL *dashURL = [self om_dashURLFromQuickHelpLinkActionInformation:info];
+        if (dashURL) {
+            BOOL dashOpened = [self om_showQuickHelpForDashURL:dashURL];
+            if (!dashOpened) {
+                [self om_dashNotInstalledFallback];
+            }
+        }
+        else
+        {
+            NSBeep();
+        }
+	}
+    @catch (NSException *exception) {
+        
+    }
 }
 
 - (void)om_dashNotInstalledFallback
@@ -72,6 +122,68 @@
 	NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
 	[pboard setString:searchString forType:NSStringPboardType];
 	return NSPerformService(@"Look Up in Dash", pboard);
+}
+
+- (BOOL)om_shouldHandleLinkClickWithActionInformation:(id)info {
+    OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
+    if (dashStyle != OMQuickHelpPluginIntegrationStyleReference) return NO;
+
+    NSString *linkURLString = [[[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkURL"] absoluteString];
+    BOOL linkOpensReference = [linkURLString rangeOfString:@".docset"].location != NSNotFound;
+    return linkOpensReference;
+}
+
+- (NSURL *)om_dashURLFromQuickHelpLinkActionInformation:(id)info {
+    NSURL *linkURL = [[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkURL"];
+    NSString *linkURLString = [linkURL absoluteString];
+
+    // Determine the type of the result, e.g. "Class" (cl)
+    NSString *resultType = nil;
+    static NSRegularExpression *typeExpression = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        typeExpression = [[NSRegularExpression alloc] initWithPattern:@"apple_ref\\/.+?\\/(.+?)\\/" options:0 error:NULL];
+    });
+    NSTextCheckingResult *match = [typeExpression firstMatchInString:linkURLString options:0 range:NSMakeRange(0, [linkURLString length])];
+    if (match) {
+        resultType = [linkURLString substringWithRange:[match rangeAtIndex:1]];
+    } else {
+        return nil;
+    }
+
+    // Determine the name of the result/page to show, e.g. "NSAlert"
+    NSString *resultName = nil;
+    if ([resultType isEqualToString:@"uid"]) {
+        // this document is release notes, or a technical note, etc., whose name is given by the link's label
+        resultName = [[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkLabel"];
+        // we must remove spaces from the name for how Dash searches (a space initiates "Find in Page" search)
+        resultName = [resultName stringByReplacingOccurrencesOfString:@" " withString:@""];
+
+        // change the result type to "doc" so that Dash uses the proper icon
+        resultType = @"doc";
+    } else {
+        // this document is an API reference, for which the most accurate name is the last path component of the URL
+        // --the symbol clicked on, or the name of the reference page to be opened
+        resultName = [linkURLString lastPathComponent];
+    }
+
+    // Determine the path to open
+    // take everything after "file://" so that we include the fragment (the in-page link)
+    NSString *resultPath = [linkURLString substringFromIndex:[@"file://" length]];
+
+    // Build the Dash URL
+    // Given this URL, what Dash will do (per @kapeli) is:
+    //
+    //     1. Perform a regular search for the result using the currently enabled docsets
+    //     2. Search for a result that matches the path
+    //     3. If a result is found, that result is prioritised and it appears as the top result
+    //     4. If a result with that path is not found, a fake result will be added to the top
+    //
+    return [NSURL URLWithString:[NSString stringWithFormat:@"dash-advanced://%@/%@/%@", resultName, resultType, resultPath]];
+}
+
+- (BOOL)om_showQuickHelpForDashURL:(NSURL *)dashURL {
+    return [[NSWorkspace sharedWorkspace] openURL:dashURL];
 }
 
 - (NSString *)om_appendActiveSchemeKeyword:(NSString *)searchString
@@ -159,6 +271,13 @@
 		if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
 			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL];
 		}
+
+		Class quickHelpControllerClass = NSClassFromString(@"IDEQuickHelpOneShotWindowContentViewController");
+		if (quickHelpControllerClass) {
+		    [quickHelpControllerClass jr_swizzleMethod:@selector(handleLinkClickWithActionInformation:)
+		                                    withMethod:@selector(om_handleLinkClickWithActionInformation:) error:NULL];
+		}
+
 		[[self alloc] init];
 	});
 }
@@ -171,13 +290,55 @@
 		NSMenuItem *editMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
 		if (editMenuItem) {
 			[[editMenuItem submenu] addItem:[NSMenuItem separatorItem]];
+
 			NSMenuItem *dashMenuItem = [[[NSMenuItem alloc] initWithTitle:@"Dash Integration" action:nil keyEquivalent:@""] autorelease];
             NSMenu *dashMenu = [[[NSMenu alloc] init] autorelease];
             [dashMenuItem setSubmenu:dashMenu];
-			NSMenuItem *toggleDashItem = [dashMenu addItemWithTitle:@"Enable Dash Quick Help" action:@selector(toggleOpenInDashEnabled:) keyEquivalent:@""];
-            [toggleDashItem setTarget:self];
-            NSMenuItem *togglePlatformDetection = [dashMenu addItemWithTitle:@"Enable Dash Platform Detection" action:@selector(toggleDashPlatformDetection:) keyEquivalent:@""];
+
+            /*
+             Create a menu looking like:
+             
+             Disabled
+             Replace Quick Help
+             Replace Reference
+             ————————————— (separator item)
+             Advanced
+             — Enable Dash Platform Detection (in a submenu of Advanced)
+             */
+
+            NSMutableSet *integrationStyleMenuItems = [[[NSMutableSet alloc] init] autorelease];
+
+            NSMenuItem *disabledStyleItem = [dashMenu addItemWithTitle:@"Disabled" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
+            disabledStyleItem.tag = OMQuickHelpPluginIntegrationStyleDisabled;
+            [disabledStyleItem setTarget:self];
+            [integrationStyleMenuItems addObject:disabledStyleItem];
+
+			NSMenuItem *quickHelpStyleItem = [dashMenu addItemWithTitle:@"Replace Quick Help" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
+            quickHelpStyleItem.tag = OMQuickHelpPluginIntegrationStyleQuickHelp;
+            [quickHelpStyleItem setTarget:self];
+            [integrationStyleMenuItems addObject:quickHelpStyleItem];
+
+            NSMenuItem *referenceStyleItem = [dashMenu addItemWithTitle:@"Replace Reference" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
+            referenceStyleItem.tag = OMQuickHelpPluginIntegrationStyleReference;
+            [referenceStyleItem setTarget:self];
+            [integrationStyleMenuItems addObject:referenceStyleItem];
+
+            // the default menu option should be to replace the quick help popup
+            if (![[NSUserDefaults standardUserDefaults] objectForKey:kOMOpenInDashStyle]) {
+                [[NSUserDefaults standardUserDefaults] setInteger:OMQuickHelpPluginIntegrationStyleQuickHelp forKey:kOMOpenInDashStyle];
+            }
+
+            _integrationStyleMenuItems = [integrationStyleMenuItems copy];
+
+            [dashMenu addItem:[NSMenuItem separatorItem]];
+
+            NSMenuItem *advancedMenuItem = [dashMenu addItemWithTitle:@"Advanced" action:nil keyEquivalent:@""];
+            NSMenu *advancedMenu = [[[NSMenu alloc] init] autorelease];
+            [advancedMenuItem setSubmenu:advancedMenu];
+
+            NSMenuItem *togglePlatformDetection = [advancedMenu addItemWithTitle:@"Enable Dash Platform Detection" action:@selector(toggleDashPlatformDetection:) keyEquivalent:@""];
             [togglePlatformDetection setTarget:self];
+
 			[[editMenuItem submenu] addItem:dashMenuItem];
 		}
 	}
@@ -186,12 +347,9 @@
 
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
 {
-	if ([menuItem action] == @selector(toggleOpenInDashEnabled:)) {
-		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled]) {
-			[menuItem setState:NSOffState];
-		} else {
-			[menuItem setState:NSOnState];
-		}
+	if ([_integrationStyleMenuItems containsObject:menuItem]) {
+        OMQuickHelpPluginIntegrationStyle selectedStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
+        [menuItem setState:(menuItem.tag == selectedStyle) ? NSOnState : NSOffState];
 	}
     else if([menuItem action] == @selector(toggleDashPlatformDetection:)) {
 		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionEnabled]) {
@@ -203,10 +361,10 @@
 	return YES;
 }
 
-- (void)toggleOpenInDashEnabled:(id)sender
+- (void)toggleIntegrationStyle:(id)sender
 {
-	BOOL disabled = [[NSUserDefaults standardUserDefaults] boolForKey:kOMOpenInDashDisabled];
-	[[NSUserDefaults standardUserDefaults] setBool:!disabled forKey:kOMOpenInDashDisabled];
+    OMQuickHelpPluginIntegrationStyle style = [(NSMenuItem *)sender tag];
+	[[NSUserDefaults standardUserDefaults] setInteger:style forKey:kOMOpenInDashStyle];
 }
 
 - (void)toggleDashPlatformDetection:(id)sender
