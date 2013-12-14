@@ -277,8 +277,9 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 		if (quickHelpControllerClass) {
 		    [quickHelpControllerClass jr_swizzleMethod:@selector(handleLinkClickWithActionInformation:)
 		                                    withMethod:@selector(om_handleLinkClickWithActionInformation:) error:NULL];
-            quickHelpPlugin = [[self alloc] init];
 		}
+
+        quickHelpPlugin = [[self alloc] init];
 	});
 }
 
