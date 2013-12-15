@@ -2,7 +2,7 @@
 
 ## Overview
 
-This plugin allows you to use [Dash](http://kapeli.com/dash/) instead of Xcode's own documentation viewer when using **Option-Click** (or the equivalent keyboard shortcut) to view the documentation for the selected symbol. If you like the default Xcode quick help popover, you can still use it and make the links inside the popover open up in Dash instead.
+This plugin allows you to use [Dash](http://kapeli.com/dash/) instead of Xcode's own documentation viewer when using **Option-Click** (or the equivalent keyboard shortcut) to view the documentation for the selected symbol. Dash will also open when you option-double-click on a symbol, or if you click a documentation link in Xcode's autocomplete popup. If you like the default Xcode quick help popover, you can still use it and make the links inside the popover open up in Dash instead.
 
 While you could also use Dash's "Look up in Dash" Services menu item, this is better in several ways:
 
@@ -21,7 +21,7 @@ I'm [@olemoritz](http://twitter.com/olemoritz) on Twitter.
 1. Download the source, build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
 2. To use - **Option-Click** any method/class/symbol in Xcode's text editor. 
 3. If you prefer the keyboard, set up a shortcut in Xcode's Preferences > Key Bindings for **Quick Help for Selected Item**.
-4. If you select "Dash Integration > Replace Reference" in the "Edit" menu, Dash will only open when you click a link in the "Quick Help" popover.
+4. If you select "Dash Integration > Replace Reference" in the "Edit" menu, Dash won't replace the Quick Help popover entirely, but will only open when you click a link in the popover.
 
 ## Automatic Platform Detection
 The plugin can use Xcode's current active scheme to determine which docset to search (iOS or OS X). Using this feature, ONLY the iOS or OS X docsets will be searched, so you might not want this if, for example, you also want to search the Cocos2D docset.
