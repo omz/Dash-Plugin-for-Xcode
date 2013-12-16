@@ -24,7 +24,7 @@ I'm [@olemoritz](http://twitter.com/olemoritz) on Twitter.
 4. If you select "Dash Integration > Replace Reference" in the "Edit" menu, Dash won't replace the Quick Help popover entirely, but will only open when you click a link in the popover.
 
 ## Automatic Platform Detection
-The plugin can use Xcode's current active scheme to determine which docset to search (iOS or OS X). Using this feature, ONLY the iOS or OS X docsets will be searched, so you might not want this if, for example, you also want to search the Cocos2D docset.
+The plugin can use Xcode's current active scheme to try to guess which docsets it should search, making it very easy to switch between iOS, OS X or even C/C++ projects. It's recommended that all users try out this feature and report back anything that might be wrong.
 
 To enable automatic platform detection, go to Edit > Dash Integration > Advanced > Enable Dash Platform Detection in Xcode's menu (after you installed the plugin).
 

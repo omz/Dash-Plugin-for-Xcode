@@ -8,6 +8,7 @@
 
 #import "OMQuickHelpPlugin.h"
 #import "JRSwizzle.h"
+#import "objc/runtime.h"
 
 #define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
 #define kOMOpenInDashStyle                  @"OMOpenInDashStyle"
@@ -242,74 +243,167 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 {
     if([[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionEnabled])
     {
-        @try { // I don't trust myself with this swizzling business
-            id windowController = [[NSApp keyWindow] windowController];
-            id workspace = [windowController valueForKey:@"_workspace"];
-            id runContextManager = [workspace valueForKey:@"runContextManager"];
-            id activeDestination = [runContextManager valueForKey:@"_activeRunDestination"];
-            NSString *destination = [activeDestination valueForKey:@"targetIdentifier"];
-            
-            if(destination && [destination isKindOfClass:[NSString class]] && destination.length)
+        BOOL dashHasPluginURL = [[NSWorkspace sharedWorkspace] URLForApplicationToOpenURL:[NSURL URLWithString:@"dash-plugin://blabla"]] != nil;
+        BOOL isObjectiveCPP = NO;
+        BOOL isCppOrC = NO;
+        @try {
+            if(dashHasPluginURL)
             {
-                destination = [destination lowercaseString];
-                BOOL iOS = [destination hasPrefix:@"iphone"] || [destination hasPrefix:@"ipad"] || [destination hasPrefix:@"ios"];
-                BOOL mac = [destination hasPrefix:@"mac"] || [destination hasPrefix:@"osx"];
-                if(iOS || mac)
+                NSString *fileType = nil;
+                @try {
+                    NSURL *currentURL = [[[self valueForKey:@"selectedExpression"] valueForKey:@"textSelectionLocation"] valueForKey:@"documentURL"];
+                    if(currentURL)
+                    {
+                        fileType = [currentURL pathExtension];
+                    }
+                }
+                @catch(NSException *exception) {
+                }
+                if(fileType && fileType.length)
                 {
-                    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-                    [defaults addSuiteNamed:@"com.kapeli.dash"];
-                    [defaults synchronize];
-                    NSArray *docsets = [defaults objectForKey:@"docsets"];
-                    docsets = [docsets sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
-                        BOOL obj1Enabled = [[obj1 objectForKey:@"isProfileEnabled"] boolValue];
-                        BOOL obj2Enabled = [[obj2 objectForKey:@"isProfileEnabled"] boolValue];
-                        if(obj1Enabled && !obj2Enabled)
-                        {
-                            return NSOrderedAscending;
-                        }
-                        else if(!obj1Enabled && obj2Enabled)
-                        {
-                            return NSOrderedDescending;
-                        }
-                        else
-                        {
-                            return NSOrderedSame;
-                        }
-                    }];
-                    
-                    NSString *foundKeyword = nil;
-                    for(NSDictionary *docset in docsets)
+                    if([fileType isEqualToString:@"c"])
                     {
-                        NSString *platform = [[docset objectForKey:@"platform"] lowercaseString];
-                        BOOL found = NO;
-                        if(iOS && ([platform hasPrefix:@"iphone"] || [platform hasPrefix:@"ios"]))
-                        {
-                            found = YES;
-                        }
-                        else if(mac && ([platform hasPrefix:@"macosx"] || [platform hasPrefix:@"osx"]))
-                        {
-                            found = YES;
-                        }
-                        if(found)
-                        {
-                            NSString *keyword = [docset objectForKey:@"keyword"];
-                            foundKeyword = (keyword && keyword.length) ? keyword : platform;
-                            break;
-                        }
+                        isCppOrC = YES;
+                        searchString = [@"dash-plugin://keys=c,glib,gl2,gl3,gl4,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                     }
-                    if(foundKeyword)
+                    else if([@[@"cpp", @"cc", @"cp", @"cxx", @"c++", @"c", @"hpp", @"hxx", @"h++", @"hh"] containsObject:[fileType lowercaseString]])
                     {
-                        searchString = [[[foundKeyword stringByReplacingOccurrencesOfString:@":" withString:@""] stringByAppendingString:@":"] stringByAppendingString:searchString];
+                        isCppOrC = YES;
+                        searchString = [@"dash-plugin://keys=cpp,boost,qt,cvcpp,cocos2dx,net,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                     }
-                    [defaults removeSuiteNamed:@"com.kapeli.dash"];
+                    else if([[fileType lowercaseString] isEqualToString:@"mm"] || [fileType isEqualToString:@"M"])
+                    {
+                        isObjectiveCPP = YES; // add later, depending on active platform
+                    }
                 }
             }
         }
-        @catch (NSException *exception) { }
+        @catch(NSException *exception) { }
+        
+        BOOL didAddPlatform = NO;
+        if(!isCppOrC)
+        {
+            @try {
+                id windowController = [[NSApp keyWindow] windowController];
+                id workspace = [windowController valueForKey:@"_workspace"];
+                id runContextManager = [workspace valueForKey:@"runContextManager"];
+                id activeDestination = [runContextManager valueForKey:@"_activeRunDestination"];
+                NSString *destination = [activeDestination valueForKey:@"targetIdentifier"];
+                
+                if(destination && [destination isKindOfClass:[NSString class]] && destination.length)
+                {
+                    destination = [destination lowercaseString];
+                    BOOL iOS = [destination hasPrefix:@"iphone"] || [destination hasPrefix:@"ipad"] || [destination hasPrefix:@"ios"];
+                    BOOL mac = [destination hasPrefix:@"mac"] || [destination hasPrefix:@"osx"];
+                    if(iOS || mac)
+                    {
+                        if(dashHasPluginURL)
+                        {
+                            didAddPlatform = YES;
+                            if(isObjectiveCPP)
+                            {
+                                if(iOS)
+                                {
+                                    searchString = [@"dash-plugin://keys=cpp,iphoneos,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                }
+                                else
+                                {
+                                    searchString = [@"dash-plugin://keys=cpp,macosx,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                }
+                            }
+                            else
+                            {
+                                if(iOS)
+                                {
+                                    searchString = [@"dash-plugin://keys=iphoneos,appledoc,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                }
+                                else if(mac)
+                                {
+                                    searchString = [@"dash-plugin://keys=macosx,appledoc,cocos2d,cocos3d,kobold2d,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                }
+                            }
+                        }
+                        else
+                        {
+                            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+                            [defaults addSuiteNamed:@"com.kapeli.dash"];
+                            [defaults synchronize];
+                            NSArray *docsets = [defaults objectForKey:@"docsets"];
+                            docsets = [docsets sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+                                BOOL obj1Enabled = [[obj1 objectForKey:@"isProfileEnabled"] boolValue];
+                                BOOL obj2Enabled = [[obj2 objectForKey:@"isProfileEnabled"] boolValue];
+                                if(obj1Enabled && !obj2Enabled)
+                                {
+                                    return NSOrderedAscending;
+                                }
+                                else if(!obj1Enabled && obj2Enabled)
+                                {
+                                    return NSOrderedDescending;
+                                }
+                                else
+                                {
+                                    return NSOrderedSame;
+                                }
+                            }];
+                            
+                            NSString *foundKeyword = nil;
+                            for(NSDictionary *docset in docsets)
+                            {
+                                NSString *platform = [[docset objectForKey:@"platform"] lowercaseString];
+                                BOOL found = NO;
+                                if(iOS && ([platform hasPrefix:@"iphone"] || [platform hasPrefix:@"ios"]))
+                                {
+                                    found = YES;
+                                }
+                                else if(mac && ([platform hasPrefix:@"macosx"] || [platform hasPrefix:@"osx"]))
+                                {
+                                    found = YES;
+                                }
+                                if(found)
+                                {
+                                    NSString *keyword = [docset objectForKey:@"keyword"];
+                                    foundKeyword = (keyword && keyword.length) ? keyword : platform;
+                                    break;
+                                }
+                            }
+                            if(foundKeyword)
+                            {
+                                searchString = [[[foundKeyword stringByReplacingOccurrencesOfString:@":" withString:@""] stringByAppendingString:@":"] stringByAppendingString:searchString];
+                            }
+                            [defaults removeSuiteNamed:@"com.kapeli.dash"];
+                        }
+                    }
+                }
+                if(!didAddPlatform)
+                {
+                    if(isObjectiveCPP)
+                    {
+                        searchString = [@"dash-plugin://keys=cpp,iphoneos,macosx,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                    }
+                }
+            }
+            @catch (NSException *exception) { }
+        }
     }
     return searchString;
 }
 
+- (void)logAllKeysAndValuesFor:(id)object
+{
+    NSLog(@"Logging keys for %@:", object);
+    unsigned int outCount, i;
+    objc_property_t *properties = class_copyPropertyList([object class], &outCount);
+    for(i = 0; i < outCount; i++) {
+        objc_property_t property = properties[i];
+        const char *propName = property_getName(property);
+        if(propName) {
+            NSString *propertyName = [NSString stringWithUTF8String:propName];
+            NSLog(@"%@ -> %@", propertyName, [object valueForKey:propertyName]);
+        }
+    }
+    free(properties);
+}
+         
 @end
 
 
