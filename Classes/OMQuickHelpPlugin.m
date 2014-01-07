@@ -70,6 +70,54 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 	}
 }
 
+- (void)om_searchDocumentationForSelectedText:(id)sender
+{
+    @try {
+        OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
+        if (dashStyle == OMQuickHelpPluginIntegrationStyleDisabled || ![sender isKindOfClass:NSClassFromString(@"IDESourceCodeEditor")]) {
+            [self om_searchDocumentationForSelectedText:sender];
+            return;
+        }
+        NSString *symbolString = [sender valueForKeyPath:@"selectedExpression.symbolString"];
+        if(symbolString.length)
+        {
+            BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
+            if (!dashOpened) {
+                [self om_dashNotInstalledFallback];
+            }
+        }
+        else
+        {
+            NSBeep();
+        }
+    }
+    @catch(NSException *exception) { }
+}
+
+- (void)om_showDocumentationForSymbol:(id)sender
+{
+    @try {
+        OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
+        if (dashStyle == OMQuickHelpPluginIntegrationStyleDisabled || ![sender isKindOfClass:NSClassFromString(@"IDESourceCodeEditor")]) {
+            [self om_showDocumentationForSymbol:sender];
+            return;
+        }
+        NSString *symbolString = [sender valueForKeyPath:@"selectedExpression.symbolString"];
+        if(symbolString.length)
+        {
+            BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
+            if (!dashOpened) {
+                [self om_dashNotInstalledFallback];
+            }
+        }
+        else
+        {
+            NSBeep();
+        }
+    }
+    @catch(NSException *exception) { }
+}
+
 // The quick help popup is actually a web view, and the links are actual links.
 // We examine the URL of any link clicked to see whether Xcode is trying to open a docset page
 // (as opposed to a source file).
@@ -425,10 +473,18 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 		                                    withMethod:@selector(om_handleLinkClickWithActionInformation:) error:NULL];
 		}
 
+		Class quickHelpCommandHandler = NSClassFromString(@"IDEQuickHelpCommandHandler");
+		if (quickHelpCommandHandler) {
+		    [quickHelpCommandHandler jr_swizzleMethod:@selector(showDocumentationForSymbol:)
+		                                    withMethod:@selector(om_showDocumentationForSymbol:) error:NULL];
+		}
+
         Class docCommandHandlerClass = NSClassFromString(@"IDEDocCommandHandler");
         if (docCommandHandlerClass) {
             [docCommandHandlerClass jr_swizzleClassMethod:@selector(loadURL:)
                                           withClassMethod:@selector(om_loadDocURL:) error:NULL];
+            [docCommandHandlerClass jr_swizzleMethod:@selector(searchDocumentationForSelectedText:)
+                                          withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL];
         }
 
         quickHelpPlugin = [[self alloc] init];
