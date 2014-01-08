@@ -151,28 +151,31 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
             return;
         }
 
-        id result = objc_getAssociatedObject(NSApp, @"om_lastQueryResult");
-        if(result)
-        {
-            if([result respondsToSelector:@selector(ancestorNames)] && [result respondsToSelector:@selector(symbolName)])
+        @try {
+            id result = objc_getAssociatedObject(NSApp, @"om_lastQueryResult");
+            if(result)
             {
-                id ancestorNames = [result performSelector:@selector(ancestorNames)];
-                id symbolName = [result performSelector:@selector(symbolName)];
-                if(ancestorNames && [ancestorNames isKindOfClass:[NSArray class]] && [ancestorNames count] && symbolName && [symbolName isKindOfClass:[NSString class]] && [ancestorNames[0] isKindOfClass:[NSString class]] && ![symbolName isEqualToString:ancestorNames[0]])
+                if([result respondsToSelector:@selector(ancestorNames)] && [result respondsToSelector:@selector(symbolName)])
                 {
-                    id editor = [OMQuickHelpPlugin currentEditor];
-                    NSString *symbolString = [editor valueForKeyPath:@"selectedExpression.symbolString"];
-                    if([symbolString isEqualToString:ancestorNames[0]])
+                    id ancestorNames = [result performSelector:@selector(ancestorNames)];
+                    id symbolName = [result performSelector:@selector(symbolName)];
+                    if(ancestorNames && [ancestorNames isKindOfClass:[NSArray class]] && [ancestorNames count] && symbolName && [symbolName isKindOfClass:[NSString class]] && [ancestorNames[0] isKindOfClass:[NSString class]] && ![symbolName isEqualToString:ancestorNames[0]])
                     {
-                        BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
-                        if (!dashOpened) {
-                            [self om_dashNotInstalledFallback];
+                        id editor = [OMQuickHelpPlugin currentEditor];
+                        NSString *symbolString = [editor valueForKeyPath:@"selectedExpression.symbolString"];
+                        if([symbolString isEqualToString:ancestorNames[0]])
+                        {
+                            BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
+                            if (!dashOpened) {
+                                [self om_dashNotInstalledFallback];
+                            }
+                            return;
                         }
-                        return;
                     }
                 }
             }
         }
+        @catch(NSException *exception) { }
         NSURL *dashURL = [self om_dashURLFromAppleDocURL:url];
         if (dashURL) {
             BOOL dashOpened = [self om_openDashFromURL:dashURL];
@@ -496,7 +499,10 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     id result = [self om_queryResultForToken:arg1 ancestorHierarchy:arg2];
     if(result)
     {
-        objc_setAssociatedObject(NSApp, @"om_lastQueryResult", result, OBJC_ASSOCIATION_RETAIN);
+        @try {
+            objc_setAssociatedObject(NSApp, @"om_lastQueryResult", result, OBJC_ASSOCIATION_RETAIN);
+        }
+        @catch(NSException *exception) { }
     }
     return result;
 }
