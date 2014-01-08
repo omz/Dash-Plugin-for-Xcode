@@ -496,7 +496,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     id result = [self om_queryResultForToken:arg1 ancestorHierarchy:arg2];
     if(result)
     {
-        objc_setAssociatedObject(NSApp, @"om_lastQueryResult", result, OBJC_ASSOCIATION_ASSIGN);
+        objc_setAssociatedObject(NSApp, @"om_lastQueryResult", result, OBJC_ASSOCIATION_RETAIN);
     }
     return result;
 }
@@ -644,7 +644,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 + (void)clearLastQueryResult
 {
     @try {
-        objc_setAssociatedObject(NSApp, @"om_lastQueryResult", nil, OBJC_ASSOCIATION_ASSIGN);
+        objc_setAssociatedObject(NSApp, @"om_lastQueryResult", nil, OBJC_ASSOCIATION_RETAIN);
     }
     @catch(NSException *exception) { }
 }
