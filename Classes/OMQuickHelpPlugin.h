@@ -13,4 +13,8 @@
 	NSSet *_integrationStyleMenuItems;
 }
 
++ (id)handlerForAction:(SEL)arg1 withSelectionSource:(id)arg2;
++ (id)currentEditor;
++ (void)clearLastQueryResult;
+
 @end
