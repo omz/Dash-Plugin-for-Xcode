@@ -238,8 +238,9 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
     if (dashStyle != OMQuickHelpPluginIntegrationStyleReference) return NO;
 
-    NSString *linkURLString = [[[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkURL"] absoluteString];
-    BOOL linkOpensReference = [linkURLString rangeOfString:@".docset"].location != NSNotFound;
+    NSURL *linkURL = [[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkURL"];
+    NSString *linkURLString = [linkURL absoluteString];
+    BOOL linkOpensReference = [linkURLString rangeOfString:@".docset"].location != NSNotFound && ![[linkURL pathExtension] isCaseInsensitiveLike:@"h"];
     return linkOpensReference;
 }
 
