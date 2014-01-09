@@ -134,7 +134,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
         }
         else
         {
-            NSBeep();
+            [self om_revertToDefaultSymbolSearch];
         }
 	}
     @catch (NSException *exception) {
@@ -185,11 +185,28 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
         }
         else
         {
-            NSBeep();
+            [self om_revertToDefaultSymbolSearch];
         }
     }
     @catch (NSException *exception) {
 
+    }
+}
+
+- (void)om_revertToDefaultSymbolSearch
+{
+    id editor = [OMQuickHelpPlugin currentEditor];
+    NSString *symbolString = [editor valueForKeyPath:@"selectedExpression.symbolString"];
+    if(symbolString.length)
+    {
+        BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
+        if (!dashOpened) {
+            [self om_dashNotInstalledFallback];
+        }
+    }
+    else
+    {
+        NSBeep();
     }
 }
 
@@ -228,6 +245,10 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 
 - (NSURL *)om_dashURLFromQuickHelpLinkActionInformation:(id)info {
     NSURL *linkURL = [[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkURL"];
+    if(![linkURL fragment] || [[linkURL fragment] rangeOfString:@"apple_ref"].location == NSNotFound)
+    {
+        return nil;
+    }
 
     NSString *dashResultName, *dashResultType = [self om_dashResultTypeFromAppleDocURL:linkURL];
     if ([dashResultType isEqualToString:@"uid"]) {
@@ -250,6 +271,10 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 }
 
 - (NSURL *)om_dashURLFromAppleDocURL:(NSURL *)url {
+    if(![url fragment] || [[url fragment] rangeOfString:@"apple_ref"].location == NSNotFound)
+    {
+        return nil;
+    }
     return [self om_dashURLForResultWithName:[self om_dashResultNameFromAppleDocURL:url]
                                         type:[self om_dashResultTypeFromAppleDocURL:url]
                                         path:[self om_dashResultPathFromAppleDocURL:url]];
