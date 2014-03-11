@@ -9,6 +9,7 @@
 #import "OMQuickHelpPlugin.h"
 #import "JRSwizzle.h"
 #import "objc/runtime.h"
+#import "NSString+DHUtils.h"
 
 #define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
 #define kOMOpenInDashStyle                  @"OMOpenInDashStyle"
@@ -324,12 +325,23 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     //     3. If a result is found, that result is prioritised and it appears as the top result
     //     4. If a result with that path is not found, a fake result will be added to the top
     //
+    
+    NSString *pathWithoutFragment = [path dh_substringToString:@"#"];
+    if(![[NSFileManager defaultManager] fileExistsAtPath:pathWithoutFragment])
+    {
+        path = nil;
+    }
+    
     if([[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionEnabled])
     {
         BOOL dashHasAdvancedWithKeys = [[NSWorkspace sharedWorkspace] URLForApplicationToOpenURL:[NSURL URLWithString:@"dash-advanced-with-keys://blabla"]] != nil;
         if(dashHasAdvancedWithKeys)
         {
-            NSString *query = [NSString stringWithFormat:@"/%@/%@/%@", name, type, path];
+            NSString *query = [NSString stringWithFormat:@"/%@/%@", name, type];
+            if(path)
+            {
+                query = [query stringByAppendingFormat:@"/%@", path];
+            }
             NSString *urlString = [self om_appendActiveSchemeKeyword:query];
             if([urlString hasPrefix:@"dash-plugin://keys="])
             {
@@ -337,7 +349,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
             }
         }
     }
-    return [NSURL URLWithString:[NSString stringWithFormat:@"dash-advanced://%@/%@/%@", name, type, path]];
+    return [NSURL URLWithString:[NSString stringWithFormat:@"dash-advanced://%@/%@%@", name, type, (path) ? [@"/" stringByAppendingString:path] : @""]];
 }
 
 - (BOOL)om_openDashFromURL:(NSURL *)dashURL {
@@ -345,12 +357,9 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     if(dashHasAdvancedWithKeys)
     {
         NSString *urlString = [dashURL absoluteString];
-        if([urlString hasPrefix:@"dash-advanced-with-keys://"] || [urlString hasPrefix:@"dash-advanced://"])
-        {
-            NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
-            [pboard setString:urlString forType:NSStringPboardType];
-            return NSPerformService(@"Look Up in Dash", pboard);            
-        }
+        NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
+        [pboard setString:urlString forType:NSStringPboardType];
+        return NSPerformService(@"Look Up in Dash", pboard);
     }
     return [[NSWorkspace sharedWorkspace] openURL:dashURL];
 }
