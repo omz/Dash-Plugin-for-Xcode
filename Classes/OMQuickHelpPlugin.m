@@ -232,7 +232,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     searchString = [self om_appendActiveSchemeKeyword:searchString];
 	NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
 	[pboard setString:searchString forType:NSStringPboardType];
-	return NSPerformService(@"Look Up in Dash", pboard);
+	return NSPerformService(@"Look Up in Dash", pboard) || NSPerformService(@"Look Up in Dash Beta", pboard);
 }
 
 - (BOOL)om_shouldHandleLinkClickWithActionInformation:(id)info {
@@ -359,7 +359,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
         NSString *urlString = [dashURL absoluteString];
         NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
         [pboard setString:urlString forType:NSStringPboardType];
-        return NSPerformService(@"Look Up in Dash", pboard);
+        return NSPerformService(@"Look Up in Dash", pboard) || NSPerformService(@"Look Up in Dash Beta", pboard);
     }
     return [[NSWorkspace sharedWorkspace] openURL:dashURL];
 }
