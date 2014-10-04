@@ -371,12 +371,13 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
         BOOL dashHasPluginURL = [[NSWorkspace sharedWorkspace] URLForApplicationToOpenURL:[NSURL URLWithString:@"dash-plugin://blabla"]] != nil;
         BOOL isObjectiveCPP = NO;
         BOOL isCppOrC = NO;
+        BOOL isSwift = NO;
         @try {
             if(dashHasPluginURL)
             {
                 NSString *fileType = nil;
                 @try {
-                    NSURL *currentURL = [[[self valueForKey:@"selectedExpression"] valueForKey:@"textSelectionLocation"] valueForKey:@"documentURL"];
+                    NSURL *currentURL = [[[[OMQuickHelpPlugin currentEditor] valueForKey:@"selectedExpression"] valueForKey:@"textSelectionLocation"] valueForKey:@"documentURL"];
                     if(currentURL)
                     {
                         fileType = [currentURL pathExtension];
@@ -399,6 +400,10 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
                     else if([[fileType lowercaseString] isEqualToString:@"mm"] || [fileType isEqualToString:@"M"])
                     {
                         isObjectiveCPP = YES; // add later, depending on active platform
+                    }
+                    else if([@[@"swift", @"playground"] containsObject:[fileType lowercaseString]])
+                    {
+                        isSwift = YES; // add later, depending on active platform
                     }
                 }
             }
@@ -436,15 +441,26 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
                                     searchString = [@"dash-plugin://keys=cpp,macosx,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                             }
+                            else if(isSwift)
+                            {
+                                if(iOS)
+                                {
+                                    searchString = [@"dash-plugin://keys=swift,iphoneos,appledoc,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                }
+                                else if(mac)
+                                {
+                                    searchString = [@"dash-plugin://keys=swift,macosx,appledoc,cocos2d,cocos3d,kobold2d,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                }
+                            }
                             else
                             {
                                 if(iOS)
                                 {
-                                    searchString = [@"dash-plugin://keys=iphoneos,appledoc,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=iphoneos,appledoc,cocos2d,cocos3d,kobold2d,sparrow&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(mac)
                                 {
-                                    searchString = [@"dash-plugin://keys=macosx,appledoc,cocos2d,cocos3d,kobold2d,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=macosx,appledoc,cocos2d,cocos3d,kobold2d&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                             }
                         }
@@ -513,7 +529,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     return searchString;
 }
 
-- (void)logAllKeysAndValuesFor:(id)object
++ (void)logAllKeysAndValuesFor:(id)object
 {
     NSLog(@"Logging keys for %@:", object);
     unsigned int outCount, i;
