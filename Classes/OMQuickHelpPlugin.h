@@ -1,6 +1,6 @@
 //
-//  OMColorHelper.h
-//  OMColorHelper
+//  OMQuickHelpPlugin.h
+//  OMQuickHelpPlugin
 //
 //  Created by Ole Zorn on 09/07/12.
 //
@@ -10,7 +10,8 @@
 #import <AppKit/AppKit.h>
 
 @interface OMQuickHelpPlugin : NSObject {
-	NSSet *_integrationStyleMenuItems;
+	NSSet *_quickHelpIntegrationStyleMenuItems;
+	NSSet *_searchDocumentationIntegrationStyleMenuItems;
 }
 
 + (id)handlerForAction:(SEL)arg1 withSelectionSource:(id)arg2;

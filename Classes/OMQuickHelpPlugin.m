@@ -1,6 +1,6 @@
 //
-//  OMColorHelper.m
-//  OMColorHelper
+//  OMQuickHelpPlugin.m
+//  OMQuickHelpPlugin
 //
 //  Created by Ole Zorn on 09/07/12.
 //
@@ -11,17 +11,24 @@
 #import "objc/runtime.h"
 #import "NSString+DHUtils.h"
 
-#define kOMSuppressDashNotInstalledWarning	@"OMSuppressDashNotInstalledWarning"
-#define kOMOpenInDashStyle                  @"OMOpenInDashStyle"
-#define kOMDashPlatformDetectionEnabled    @"OMDashPlatformDetectionEnabled"
+#define kOMSuppressDashNotInstalledWarning    @"OMSuppressDashNotInstalledWarning"
+#define kOMQuickHelpOpenInDashStyle           @"OMOpenInDashStyle"
+#define kOMDashPlatformDetectionEnabled       @"OMDashPlatformDetectionEnabled"
+#define kOMSearchDocumentatiobOpenInDashStyle @"OMSearchDocumentationOpenInDashStyle"
 
 typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     OMQuickHelpPluginIntegrationStyleDisabled = 0,  // Disable this plugin altogether
     OMQuickHelpPluginIntegrationStyleQuickHelp,     // Search Dash instead of showing the "Quick Help" popup
-    OMQuickHelpPluginIntegrationStyleReference      // Show the "Quick Help" popup, but search Dash instead
+    OMQuickHelpPluginIntegrationStyleReference,      // Show the "Quick Help" popup, but search Dash instead
                                                     // of showing Xcode's documentation viewer (when the "Reference" link
                                                     // in the popup is clicked)
 };
+
+typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
+    OMSearchDocumentationPluginIntegrationStyleDisabled = 0,  // Disable this plugin altogether
+    OMSearchDocumentationPluginIntegrationStyleEnabled,
+};
+
 
 @interface NSObject (OMSwizzledMethods)
 
@@ -41,9 +48,10 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 {
     [OMQuickHelpPlugin clearLastQueryResult];
 	@try {
-        OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
+        OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMQuickHelpOpenInDashStyle];
         if (dashStyle == OMQuickHelpPluginIntegrationStyleDisabled) {
-            //No, this is not an infinite loop because the method is swizzled:
+            //No, this is not an infinite loop because the method is swizzled
+            //meaning that om_showQuickHelp: now refers to the original implementation and not this method.
             [self om_showQuickHelp:sender];
             return;
 		}
@@ -71,7 +79,8 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
                 }
             } else {
                 // Show regular quick help--wait to search Dash until the user clicks on a link
-                // this is not an infinite loop because the method is swizzled:
+                //No, this is not an infinite loop because the method is swizzled
+                //meaning that om_showQuickHelp: now refers to the original implementation and not this method.
                 [self om_showQuickHelp:sender];
                 return;
             }
@@ -90,13 +99,16 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 {
     [OMQuickHelpPlugin clearLastQueryResult];
     @try {
-        OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
-        if (dashStyle == OMQuickHelpPluginIntegrationStyleDisabled || ![sender isKindOfClass:NSClassFromString(@"IDESourceCodeEditor")]) {
+        OMSearchDocumentationPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMSearchDocumentatiobOpenInDashStyle];
+        if (dashStyle == OMSearchDocumentationPluginIntegrationStyleDisabled) {
+            //No, this is not an infinite loop because the method is swizzled
+            //meaning that om_searchDocumentationForSelectedText: now refers to the original implementation and not this method.
             [self om_searchDocumentationForSelectedText:sender];
             return;
         }
-        NSString *symbolString = [sender valueForKeyPath:@"selectedExpression.symbolString"];
-        if(symbolString.length)
+
+        NSString *symbolString = [[OMQuickHelpPlugin currentEditor] valueForKeyPath:@"selectedExpression.symbolString"];
+        if (symbolString.length)
         {
             BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
             if (!dashOpened) {
@@ -145,7 +157,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 
 + (void)om_loadDocURL:(NSURL *)url {
     @try {
-        OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
+        OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMQuickHelpOpenInDashStyle];
         if (dashStyle == OMQuickHelpPluginIntegrationStyleDisabled) {
             //No, this is not an infinite loop because the method is swizzled:
             [self om_loadDocURL:url];
@@ -236,7 +248,7 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 }
 
 - (BOOL)om_shouldHandleLinkClickWithActionInformation:(id)info {
-    OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
+    OMQuickHelpPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMQuickHelpOpenInDashStyle];
     if (dashStyle != OMQuickHelpPluginIntegrationStyleReference) return NO;
 
     NSURL *linkURL = [[info objectForKey:@"WebActionElementKey"] objectForKey:@"WebElementLinkURL"];
@@ -570,7 +582,8 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     static id quickHelpPlugin = nil;
 	dispatch_once(&onceToken, ^{
 		if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
-			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL];
+            [NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL];
+			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(_searchDocumentationForSelectedText:) withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL];
 		}
 
 		Class quickHelpControllerClass = NSClassFromString(@"IDEQuickHelpOneShotWindowContentViewController");
@@ -613,36 +626,55 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
             /*
              Create a menu looking like:
              
-             Disabled
+             Disable Quick Help Integration
              Replace Quick Help
-             Replace Reference
+             Replace Quick Help Reference Link
              ————————————— (separator item)
+             Disable Search Documentation Integration
+             Replace Search Documentation
+             ————————————— (separator item)             
              — Enable Dash Platform Detection
              */
 
-            NSMutableSet *integrationStyleMenuItems = [NSMutableSet set];
+            NSMutableSet *quickHelpIntegrationStyleMenuItems = [NSMutableSet set];
 
-            NSMenuItem *disabledStyleItem = [dashMenu addItemWithTitle:@"Disabled" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
+            NSMenuItem *disabledStyleItem = [dashMenu addItemWithTitle:@"Disable Quick Help Integration" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
             disabledStyleItem.tag = OMQuickHelpPluginIntegrationStyleDisabled;
             [disabledStyleItem setTarget:self];
-            [integrationStyleMenuItems addObject:disabledStyleItem];
+            [quickHelpIntegrationStyleMenuItems addObject:disabledStyleItem];
 
 			NSMenuItem *quickHelpStyleItem = [dashMenu addItemWithTitle:@"Replace Quick Help" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
             quickHelpStyleItem.tag = OMQuickHelpPluginIntegrationStyleQuickHelp;
             [quickHelpStyleItem setTarget:self];
-            [integrationStyleMenuItems addObject:quickHelpStyleItem];
+            [quickHelpIntegrationStyleMenuItems addObject:quickHelpStyleItem];
 
-            NSMenuItem *referenceStyleItem = [dashMenu addItemWithTitle:@"Replace Reference" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
-            referenceStyleItem.tag = OMQuickHelpPluginIntegrationStyleReference;
-            [referenceStyleItem setTarget:self];
-            [integrationStyleMenuItems addObject:referenceStyleItem];
+            NSMenuItem *quickHelpReferenceLinkStyleItem = [dashMenu addItemWithTitle:@"Replace Quick Help Reference Link" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
+            quickHelpReferenceLinkStyleItem.tag = OMQuickHelpPluginIntegrationStyleReference;
+            [quickHelpReferenceLinkStyleItem setTarget:self];
+            [quickHelpIntegrationStyleMenuItems addObject:quickHelpReferenceLinkStyleItem];
+
+            _quickHelpIntegrationStyleMenuItems = [quickHelpIntegrationStyleMenuItems copy];
 
             // the default menu option should be to replace the quick help popup
-            if (![[NSUserDefaults standardUserDefaults] objectForKey:kOMOpenInDashStyle]) {
-                [[NSUserDefaults standardUserDefaults] setInteger:OMQuickHelpPluginIntegrationStyleQuickHelp forKey:kOMOpenInDashStyle];
+            if (![[NSUserDefaults standardUserDefaults] objectForKey:kOMQuickHelpOpenInDashStyle]) {
+                [[NSUserDefaults standardUserDefaults] setInteger:OMQuickHelpPluginIntegrationStyleQuickHelp forKey:kOMQuickHelpOpenInDashStyle];
             }
 
-            _integrationStyleMenuItems = [integrationStyleMenuItems copy];
+            [dashMenu addItem:[NSMenuItem separatorItem]];
+
+            NSMutableSet *searchDocumentationStyleMenuItems = [NSMutableSet new];
+
+            NSMenuItem *searchDocumentationDisabledStyleItem = [dashMenu addItemWithTitle:@"Disable Search Documentation Integration" action:@selector(toggleSearchDocumentationIntegrationStyle:) keyEquivalent:@""];
+            searchDocumentationDisabledStyleItem.tag = OMSearchDocumentationPluginIntegrationStyleDisabled;
+            [searchDocumentationDisabledStyleItem setTarget:self];
+            [searchDocumentationStyleMenuItems addObject:searchDocumentationDisabledStyleItem];
+
+            NSMenuItem *searchDocumentationEnabledStyleItem = [dashMenu addItemWithTitle:@"Replace Search Documentation" action:@selector(toggleSearchDocumentationIntegrationStyle:) keyEquivalent:@""];
+            searchDocumentationEnabledStyleItem.tag = OMSearchDocumentationPluginIntegrationStyleEnabled;
+            [searchDocumentationEnabledStyleItem setTarget:self];
+            [searchDocumentationStyleMenuItems addObject:searchDocumentationEnabledStyleItem];
+
+            _searchDocumentationIntegrationStyleMenuItems = searchDocumentationStyleMenuItems;
 
             [dashMenu addItem:[NSMenuItem separatorItem]];
 
@@ -655,10 +687,14 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
 {
-	if ([_integrationStyleMenuItems containsObject:menuItem]) {
-        OMQuickHelpPluginIntegrationStyle selectedStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMOpenInDashStyle];
+	if ([_quickHelpIntegrationStyleMenuItems containsObject:menuItem]) {
+        OMQuickHelpPluginIntegrationStyle selectedStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMQuickHelpOpenInDashStyle];
         [menuItem setState:(menuItem.tag == selectedStyle) ? NSOnState : NSOffState];
 	}
+    else if ([_searchDocumentationIntegrationStyleMenuItems containsObject:menuItem]) {
+        OMSearchDocumentationPluginIntegrationStyle selectedStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMSearchDocumentatiobOpenInDashStyle];
+        [menuItem setState:(menuItem.tag == selectedStyle) ? NSOnState : NSOffState];
+    }
     else if([menuItem action] == @selector(toggleDashPlatformDetection:)) {
 		if ([[NSUserDefaults standardUserDefaults] boolForKey:kOMDashPlatformDetectionEnabled]) {
 			[menuItem setState:NSOnState];
@@ -672,7 +708,13 @@ typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
 - (void)toggleIntegrationStyle:(id)sender
 {
     OMQuickHelpPluginIntegrationStyle style = [(NSMenuItem *)sender tag];
-	[[NSUserDefaults standardUserDefaults] setInteger:style forKey:kOMOpenInDashStyle];
+	[[NSUserDefaults standardUserDefaults] setInteger:style forKey:kOMQuickHelpOpenInDashStyle];
+}
+
+- (void)toggleSearchDocumentationIntegrationStyle:(id)sender
+{
+    OMSearchDocumentationPluginIntegrationStyle style = [(NSMenuItem *)sender tag];
+    [[NSUserDefaults standardUserDefaults] setInteger:style forKey:kOMSearchDocumentatiobOpenInDashStyle];
 }
 
 - (void)toggleDashPlatformDetection:(id)sender
