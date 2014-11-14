@@ -10,10 +10,13 @@
 #import <AppKit/AppKit.h>
 
 @interface OMQuickHelpPlugin : NSObject {
+@public
 	NSSet *_quickHelpIntegrationStyleMenuItems;
 	NSSet *_searchDocumentationIntegrationStyleMenuItems;
+    NSMenu *_dashMenu;
 }
 
++ (instancetype)sharedInstance;
 + (id)handlerForAction:(SEL)arg1 withSelectionSource:(id)arg2;
 + (id)currentEditor;
 + (void)clearLastQueryResult;
