@@ -24,7 +24,7 @@ With this option enabled, Dash will only open when you Option-Double Click somet
 
 The plugin can use Xcode's current active scheme to try to guess which docsets it should search, making it very easy to switch between iOS, OS X or even C/C++ projects. It's recommended that all users try out this feature and report back anything that might be wrong.
 
-To enable automatic platform detection, go to ***Help > Dash Integration > Enable Dash Platform Detection** in Xcode's menu (after you installed the plugin).
+To enable automatic platform detection, go to **Help > Dash Integration > Enable Dash Platform Detection** in Xcode's menu (after you installed the plugin).
 
 ## License
 
