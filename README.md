@@ -4,21 +4,19 @@
 
 This plugin allows you to use [Dash](http://kapeli.com/dash/) instead of Xcode's own documentation viewer when using **Option-Click** (or the equivalent **keyboard shortcut**) to view the documentation for the selected symbol. 
 
-If you like reading Apple's documentation, you might also like my [iOS app DocSets](https://github.com/omz/DocSets-for-iOS) for reading on your iPad or iPhone, even if you have no internet connection.
-
 I'm [@olemoritz](http://twitter.com/olemoritz) on Twitter.
 
 ## Usage & Installation
 
 1. Download the source, build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
 2. To use - **Option-Click** any method/class/symbol in Xcode's text editor. 
-3. If you prefer the **keyboard**, set up a shortcut in Xcode's Preferences > Key Bindings for **Quick Help for Selected Item**.
+3. If you prefer the **keyboard**, set up a shortcut in Xcode's Preferences > Key Bindings for **Quick Help for Selected Item** or **Search Documentation for Selected Text**.
 4. If you like the default Xcode **quick help popover**, check out the [Quick Help Popover Usage](#quick-help-popover) section below.
 5. The plugin can automatically enable/disable docsets (e.g. OS X or iOS) based on what you're working on. Check out the [Automatic Platform Detection](#automatic-platform-detection) section below.
 
 ## Quick Help Popover
 
-If you like the quick help popover that Xcode shows by default when you Option-Click something, you can re-enable it by going to **Edit > Dash Integration > Replace Reference**. 
+If you like the quick help popover that Xcode shows by default when you Option-Click something, you can re-enable it by going to **Help > Dash Integration > Replace Quick Help Reference Link**. 
 
 With this option enabled, Dash will only open when you Option-Double Click something or when you click a link in the quick help popover.
 
@@ -26,7 +24,7 @@ With this option enabled, Dash will only open when you Option-Double Click somet
 
 The plugin can use Xcode's current active scheme to try to guess which docsets it should search, making it very easy to switch between iOS, OS X or even C/C++ projects. It's recommended that all users try out this feature and report back anything that might be wrong.
 
-To enable automatic platform detection, go to Edit > Dash Integration > Advanced > Enable Dash Platform Detection in Xcode's menu (after you installed the plugin).
+To enable automatic platform detection, go to ***Help > Dash Integration > Enable Dash Platform Detection** in Xcode's menu (after you installed the plugin).
 
 ## License
 
