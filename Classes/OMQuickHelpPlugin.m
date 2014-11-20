@@ -14,7 +14,7 @@
 #define kOMSuppressDashNotInstalledWarning    @"OMSuppressDashNotInstalledWarning"
 #define kOMQuickHelpOpenInDashStyle           @"OMOpenInDashStyle"
 #define kOMDashPlatformDetectionEnabled       @"OMDashPlatformDetectionEnabled"
-#define kOMSearchDocumentatiobOpenInDashStyle @"OMSearchDocumentationOpenInDashStyle"
+#define kOMSearchDocumentationOpenInDashStyle @"OMSearchDocumentationOpenInDashStyle"
 
 typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     OMQuickHelpPluginIntegrationStyleDisabled = 0,  // Disable this plugin altogether
@@ -101,7 +101,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
 {
     [OMQuickHelpPlugin clearLastQueryResult];
     @try {
-        OMSearchDocumentationPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMSearchDocumentatiobOpenInDashStyle];
+        OMSearchDocumentationPluginIntegrationStyle dashStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMSearchDocumentationOpenInDashStyle];
         if (dashStyle == OMSearchDocumentationPluginIntegrationStyleDisabled) {
             //No, this is not an infinite loop because the method is swizzled
             //meaning that om_searchDocumentationForSelectedText: now refers to the original implementation and not this method.
@@ -680,7 +680,12 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
         if (![[NSUserDefaults standardUserDefaults] objectForKey:kOMQuickHelpOpenInDashStyle]) {
             [[NSUserDefaults standardUserDefaults] setInteger:OMQuickHelpPluginIntegrationStyleQuickHelp forKey:kOMQuickHelpOpenInDashStyle];
         }
-
+        
+        // the default menu option should be to replace search documentation
+        if (![[NSUserDefaults standardUserDefaults] objectForKey:kOMSearchDocumentationOpenInDashStyle]) {
+            [[NSUserDefaults standardUserDefaults] setInteger:OMSearchDocumentationPluginIntegrationStyleEnabled forKey:kOMSearchDocumentationOpenInDashStyle];
+        }
+        
         [dashMenu addItem:[NSMenuItem separatorItem]];
 
         NSMutableSet *searchDocumentationStyleMenuItems = [NSMutableSet new];
@@ -714,7 +719,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
         [menuItem setState:(menuItem.tag == selectedStyle) ? NSOnState : NSOffState];
 	}
     else if ([_searchDocumentationIntegrationStyleMenuItems containsObject:menuItem]) {
-        OMSearchDocumentationPluginIntegrationStyle selectedStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMSearchDocumentatiobOpenInDashStyle];
+        OMSearchDocumentationPluginIntegrationStyle selectedStyle = [[NSUserDefaults standardUserDefaults] integerForKey:kOMSearchDocumentationOpenInDashStyle];
         [menuItem setState:(menuItem.tag == selectedStyle) ? NSOnState : NSOffState];
     }
     else if([menuItem action] == @selector(toggleDashPlatformDetection:)) {
@@ -736,7 +741,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
 - (void)toggleSearchDocumentationIntegrationStyle:(id)sender
 {
     OMSearchDocumentationPluginIntegrationStyle style = [(NSMenuItem *)sender tag];
-    [[NSUserDefaults standardUserDefaults] setInteger:style forKey:kOMSearchDocumentatiobOpenInDashStyle];
+    [[NSUserDefaults standardUserDefaults] setInteger:style forKey:kOMSearchDocumentationOpenInDashStyle];
 }
 
 - (void)toggleDashPlatformDetection:(id)sender
