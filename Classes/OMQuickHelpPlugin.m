@@ -603,26 +603,44 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
 
 + (void)pluginDidLoad:(NSBundle *)plugin
 {
-	static dispatch_once_t onceToken;
+    if([[NSRunningApplication currentApplication] isFinishedLaunching])
+    {
+        [[OMQuickHelpPlugin sharedInstance] swizzle];
+    }
+    else
+    {
+        // This is needed because Xcode 6.4+ loads the plugin before loading its own stuff (i.e. IDESourceCodeEditor),
+        // which causes swizzle to fail
+        [[NSNotificationCenter defaultCenter] addObserver:[OMQuickHelpPlugin sharedInstance] selector:@selector(swizzle) name:NSApplicationDidFinishLaunchingNotification object:nil];
+    }
+}
 
-	dispatch_once(&onceToken, ^{
-		if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
+- (void)swizzle
+{
+    static dispatch_once_t onceToken;
+    
+    dispatch_once(&onceToken, ^{
+        if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
             [NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL];
-			[NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(_searchDocumentationForSelectedText:) withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL];
-		}
-
-		Class quickHelpControllerClass = NSClassFromString(@"IDEQuickHelpOneShotWindowContentViewController");
-		if (quickHelpControllerClass) {
-		    [quickHelpControllerClass jr_swizzleMethod:@selector(handleLinkClickWithActionInformation:)
-		                                    withMethod:@selector(om_handleLinkClickWithActionInformation:) error:NULL];
-		}
+            [NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(_searchDocumentationForSelectedText:) withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL];
+        }
+        else
+        {
+            NSLog(@"OMQuickHelp: Couldn't find class IDESourceCodeEditor");
+        }
         
-		Class quickHelpQueryResult = NSClassFromString(@"IDEQuickHelpQueryResult");
-		if (quickHelpQueryResult) {
-		    [quickHelpQueryResult jr_swizzleClassMethod:@selector(queryResultForToken:ancestorHierarchy:)
-                     withClassMethod:@selector(om_queryResultForToken:ancestorHierarchy:) error:NULL];
-		}
-
+        Class quickHelpControllerClass = NSClassFromString(@"IDEQuickHelpOneShotWindowContentViewController");
+        if (quickHelpControllerClass) {
+            [quickHelpControllerClass jr_swizzleMethod:@selector(handleLinkClickWithActionInformation:)
+                                            withMethod:@selector(om_handleLinkClickWithActionInformation:) error:NULL];
+        }
+        
+        Class quickHelpQueryResult = NSClassFromString(@"IDEQuickHelpQueryResult");
+        if (quickHelpQueryResult) {
+            [quickHelpQueryResult jr_swizzleClassMethod:@selector(queryResultForToken:ancestorHierarchy:)
+                                        withClassMethod:@selector(om_queryResultForToken:ancestorHierarchy:) error:NULL];
+        }
+        
         Class docCommandHandlerClass = NSClassFromString(@"IDEDocCommandHandler");
         if (docCommandHandlerClass) {
             [docCommandHandlerClass jr_swizzleClassMethod:@selector(loadURL:)
@@ -630,14 +648,13 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
             [docCommandHandlerClass jr_swizzleMethod:@selector(searchDocumentationForSelectedText:)
                                           withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL];
         }
-
+        
         Class helpMenuDelegateClass = NSClassFromString(@"IDEHelpMenuDelegate");
         if (helpMenuDelegateClass) {
             if (![helpMenuDelegateClass jr_swizzleMethod:@selector(buildMenu:) withMethod:@selector(om_buildMenu:) error:NULL]) NSBeep();
         }
-	});
+    });
 }
-
 
 -(id)init
 {
