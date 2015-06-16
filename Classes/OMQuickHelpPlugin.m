@@ -246,7 +246,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
     searchString = [self om_appendActiveSchemeKeyword:searchString];
 	NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
 	[pboard setString:searchString forType:NSStringPboardType];
-	return NSPerformService(@"Look Up in Dash", pboard) || NSPerformService(@"Look Up in Dash Beta", pboard);
+	return NSPerformService(@"Look Up in Dash Beta", pboard) || NSPerformService(@"Look Up in Dash", pboard);
 }
 
 - (BOOL)om_shouldHandleLinkClickWithActionInformation:(id)info {
