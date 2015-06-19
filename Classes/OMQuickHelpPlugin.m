@@ -448,7 +448,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
                             {
                                 if(iOS)
                                 {
-                                    searchString = [@"dash-plugin://keys=cpp,iphoneos,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=cpp,iphoneos,watchos,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else
                                 {
@@ -459,7 +459,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
                             {
                                 if(iOS)
                                 {
-                                    searchString = [@"dash-plugin://keys=swift,iphoneos,appledoc,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=swift,iphoneos,watchos,appledoc,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(mac)
                                 {
@@ -470,7 +470,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
                             {
                                 if(iOS)
                                 {
-                                    searchString = [@"dash-plugin://keys=iphoneos,appledoc,cocos2d,cocos3d,kobold2d,sparrow&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=iphoneos,watchos,appledoc,cocos2d,cocos3d,kobold2d,sparrow&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(mac)
                                 {
@@ -533,7 +533,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
                 {
                     if(isObjectiveCPP)
                     {
-                        searchString = [@"dash-plugin://keys=cpp,iphoneos,macosx,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                        searchString = [@"dash-plugin://keys=cpp,iphoneos,macosx,watchos,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                     }
                 }
             }
