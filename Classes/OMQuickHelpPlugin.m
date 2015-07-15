@@ -390,7 +390,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
         NSString *urlString = [dashURL absoluteString];
         NSPasteboard *pboard = [NSPasteboard pasteboardWithUniqueName];
         [pboard setString:urlString forType:NSStringPboardType];
-        return NSPerformService(@"Look Up in Dash", pboard) || NSPerformService(@"Look Up in Dash Beta", pboard);
+        return NSPerformService(@"Look Up in Dash Beta", pboard) || NSPerformService(@"Look Up in Dash", pboard);
     }
     return [[NSWorkspace sharedWorkspace] openURL:dashURL];
 }
