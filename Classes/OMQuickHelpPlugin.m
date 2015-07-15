@@ -58,6 +58,23 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
             return;
 		}
 		NSString *symbolString = [self valueForKeyPath:@"selectedExpression.symbolString"];
+        if(dashStyle == OMQuickHelpPluginIntegrationStyleQuickHelp)
+        {
+            // handle three-finger tap
+            @try {
+                id mouseOverExpression = [self valueForKeyPath:@"mouseOverExpression"];
+                id mouseOverExpressionString = [mouseOverExpression valueForKeyPath:@"symbolString"];
+                if([mouseOverExpressionString length] && (!symbolString || ![mouseOverExpressionString isEqualToString:symbolString]))
+                {
+                    BOOL dashOpened = [self om_showQuickHelpForSearchString:mouseOverExpressionString];
+                    if (!dashOpened) {
+                        [self om_dashNotInstalledFallback];
+                    }
+                    return;
+                }
+            }
+            @catch(NSException *exception) {}
+        }
         if(symbolString.length)
         {
             if (dashStyle == OMQuickHelpPluginIntegrationStyleQuickHelp) {
