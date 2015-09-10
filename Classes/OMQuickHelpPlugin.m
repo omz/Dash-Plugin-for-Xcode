@@ -490,9 +490,14 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
                 if(destination && [destination isKindOfClass:[NSString class]] && destination.length)
                 {
                     destination = [destination lowercaseString];
+                    if(kOMDebugMode)
+                    {
+                        NSLog(@"Platform detection found %@ as the targetIdentifier", destination);
+                    }
                     BOOL iOS = [destination hasPrefix:@"iphone"] || [destination hasPrefix:@"ipad"] || [destination hasPrefix:@"ios"];
                     BOOL mac = [destination hasPrefix:@"mac"] || [destination hasPrefix:@"osx"];
-                    if(iOS || mac)
+                    BOOL tvos = [destination hasPrefix:@"appletvos"];
+                    if(iOS || mac || tvos)
                     {
                         if(dashHasPluginURL)
                         {
@@ -501,33 +506,45 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
                             {
                                 if(iOS)
                                 {
-                                    searchString = [@"dash-plugin://keys=cpp,iphoneos,watchos,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=cpp,iphoneos,watchos,appledoc,cocoapods,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
-                                else
+                                else if(mac)
                                 {
-                                    searchString = [@"dash-plugin://keys=cpp,macosx,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=cpp,macosx,appledoc,cocoapods,cocos2dx,cocos2d,cocos3d,kobold2d,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                }
+                                else if(tvos)
+                                {
+                                    searchString = [@"dash-plugin://keys=cpp,tvos,appledoc,cocoapods,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                             }
                             else if(isSwift)
                             {
                                 if(iOS)
                                 {
-                                    searchString = [@"dash-plugin://keys=swift,iphoneos,watchos,appledoc,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=iphoneos,watchos,swift,appledoc,cocoapods,cocos2d,cocos3d,kobold2d,sparrow&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(mac)
                                 {
-                                    searchString = [@"dash-plugin://keys=swift,macosx,appledoc,cocos2d,cocos3d,kobold2d,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=macosx,swift,appledoc,cocoapods,cocos2d,cocos3d,kobold2d&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                }
+                                else if(tvos)
+                                {
+                                    searchString = [@"dash-plugin://keys=tvos,swift,appledoc,cocoapods&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                             }
                             else
                             {
                                 if(iOS)
                                 {
-                                    searchString = [@"dash-plugin://keys=iphoneos,watchos,appledoc,cocos2d,cocos3d,kobold2d,sparrow&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=iphoneos,watchos,appledoc,cocoapods,cocos2d,cocos3d,kobold2d,sparrow&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(mac)
                                 {
-                                    searchString = [@"dash-plugin://keys=macosx,appledoc,cocos2d,cocos3d,kobold2d&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=macosx,appledoc,cocoapods,cocos2d,cocos3d,kobold2d&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                }
+                                else if(tvos)
+                                {
+                                    searchString = [@"dash-plugin://keys=tvos,appledoc,cocoapods&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                             }
                         }
@@ -567,6 +584,10 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
                                 {
                                     found = YES;
                                 }
+                                else if(tvos && ([platform hasPrefix:@"tvos"]))
+                                {
+                                    found = YES;
+                                }
                                 if(found)
                                 {
                                     NSString *keyword = [docset objectForKey:@"keyword"];
@@ -586,7 +607,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
                 {
                     if(isObjectiveCPP)
                     {
-                        searchString = [@"dash-plugin://keys=cpp,iphoneos,macosx,watchos,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                        searchString = [@"dash-plugin://keys=cpp,iphoneos,macosx,watchos,tvos,appledoc,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                     }
                 }
             }
