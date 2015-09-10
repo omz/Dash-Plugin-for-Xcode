@@ -624,90 +624,97 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
     {
         [[OMQuickHelpPlugin sharedInstance] swizzle];
     }
-    else
-    {
-        // This is needed because Xcode 6.4+ loads the plugin before loading its own stuff (i.e. IDESourceCodeEditor),
-        // which causes swizzle to fail
-        [[NSNotificationCenter defaultCenter] addObserver:[OMQuickHelpPlugin sharedInstance] selector:@selector(swizzle) name:NSApplicationDidFinishLaunchingNotification object:nil];
-    }
+    // This is needed because Xcode 6.4+ loads the plugin before loading its own stuff (i.e. IDESourceCodeEditor),
+    // which causes swizzle to fail
+    [[NSNotificationCenter defaultCenter] addObserver:[OMQuickHelpPlugin sharedInstance] selector:@selector(swizzle) name:NSApplicationDidFinishLaunchingNotification object:nil];
 }
 
 - (void)swizzle
 {
-    static dispatch_once_t onceToken;
-    
-    dispatch_once(&onceToken, ^{
-        if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
-            if(![NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL])
-            {
-                NSLog(@"OMQuickHelp: Couldn't swizzle showQuickHelp:");
-            }
-            if(![NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(_searchDocumentationForSelectedText:) withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL])
-            {
-                NSLog(@"OMQuickHelp: Couldn't swizzle _searchDocumentationForSelectedText:");
-            }
-        }
-        else
+    @synchronized([OMQuickHelpPlugin class]) {
+        if(!self.didSwizzle)
         {
-            NSLog(@"OMQuickHelp: Couldn't find class IDESourceCodeEditor");
-        }
-        
-        Class quickHelpControllerClass = NSClassFromString(@"IDEQuickHelpOneShotWindowContentViewController");
-        if (quickHelpControllerClass) {
-            if(![quickHelpControllerClass jr_swizzleMethod:@selector(handleLinkClickWithActionInformation:)
-                                            withMethod:@selector(om_handleLinkClickWithActionInformation:) error:NULL])
+            if (NSClassFromString(@"IDESourceCodeEditor") != NULL) {
+                self.didSwizzle = YES;
+                if(![NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(showQuickHelp:) withMethod:@selector(om_showQuickHelp:) error:NULL])
+                {
+                    NSLog(@"OMQuickHelp: Couldn't swizzle showQuickHelp:");
+                }
+                if(![NSClassFromString(@"IDESourceCodeEditor") jr_swizzleMethod:@selector(_searchDocumentationForSelectedText:) withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL])
+                {
+                    NSLog(@"OMQuickHelp: Couldn't swizzle _searchDocumentationForSelectedText:");
+                }
+            }
+            else
             {
-                NSLog(@"OMQuickHelp: Couldn't swizzle handleLinkClickWithActionInformation:");
+                NSLog(@"OMQuickHelp: Couldn't find class IDESourceCodeEditor");
+                ++self.swizzleRetryCount;
+                if(self.swizzleRetryCount < 10)
+                {
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        [self swizzle];
+                    });
+                }
+                return;
+            }
+            
+            Class quickHelpControllerClass = NSClassFromString(@"IDEQuickHelpOneShotWindowContentViewController");
+            if (quickHelpControllerClass) {
+                if(![quickHelpControllerClass jr_swizzleMethod:@selector(handleLinkClickWithActionInformation:)
+                                                    withMethod:@selector(om_handleLinkClickWithActionInformation:) error:NULL])
+                {
+                    NSLog(@"OMQuickHelp: Couldn't swizzle handleLinkClickWithActionInformation:");
+                }
+            }
+            else
+            {
+                NSLog(@"OMQuickHelp: Couldn't find class IDEQuickHelpOneShotWindowContentViewController");
+            }
+            
+            Class quickHelpQueryResult = NSClassFromString(@"IDEQuickHelpQueryResult");
+            if (quickHelpQueryResult) {
+                if(![quickHelpQueryResult jr_swizzleClassMethod:@selector(queryResultForToken:ancestorHierarchy:)
+                                                withClassMethod:@selector(om_queryResultForToken:ancestorHierarchy:) error:NULL])
+                {
+                    NSLog(@"OMQuickHelp: Couldn't swizzle queryResultForToken:ancestorHierarchy:");
+                }
+            }
+            else
+            {
+                NSLog(@"OMQuickHelp: Couldn't find class IDEQuickHelpQueryResult");
+            }
+            
+            Class docCommandHandlerClass = NSClassFromString(@"IDEDocCommandHandler");
+            if (docCommandHandlerClass) {
+                if(![docCommandHandlerClass jr_swizzleClassMethod:@selector(loadURL:)
+                                                  withClassMethod:@selector(om_loadDocURL:) error:NULL])
+                {
+                    NSLog(@"OMQuickHelp: Couldn't swizzle loadURL:");
+                }
+                if(![docCommandHandlerClass jr_swizzleMethod:@selector(searchDocumentationForSelectedText:)
+                                                  withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL])
+                {
+                    NSLog(@"OMQuickHelp: Couldn't swizzle searchDocumentationForSelectedText:");
+                }
+            }
+            else
+            {
+                NSLog(@"OMQuickHelp: Couldn't find class IDEDocCommandHandler");
+            }
+            
+            Class helpMenuDelegateClass = NSClassFromString(@"IDEHelpMenuDelegate");
+            if (helpMenuDelegateClass) {
+                if(![helpMenuDelegateClass jr_swizzleMethod:@selector(buildMenu:) withMethod:@selector(om_buildMenu:) error:NULL])
+                {
+                    NSLog(@"OMQuickHelp: Couldn't swizzle buildMenu:");
+                }
+            }
+            else
+            {
+                NSLog(@"OMQuickHelp: Couldn't find class IDEHelpMenuDelegate");
             }
         }
-        else
-        {
-            NSLog(@"OMQuickHelp: Couldn't find class IDEQuickHelpOneShotWindowContentViewController");
-        }
-        
-        Class quickHelpQueryResult = NSClassFromString(@"IDEQuickHelpQueryResult");
-        if (quickHelpQueryResult) {
-            if(![quickHelpQueryResult jr_swizzleClassMethod:@selector(queryResultForToken:ancestorHierarchy:)
-                                        withClassMethod:@selector(om_queryResultForToken:ancestorHierarchy:) error:NULL])
-            {
-                NSLog(@"OMQuickHelp: Couldn't swizzle queryResultForToken:ancestorHierarchy:");
-            }
-        }
-        else
-        {
-            NSLog(@"OMQuickHelp: Couldn't find class IDEQuickHelpQueryResult");
-        }
-        
-        Class docCommandHandlerClass = NSClassFromString(@"IDEDocCommandHandler");
-        if (docCommandHandlerClass) {
-            if(![docCommandHandlerClass jr_swizzleClassMethod:@selector(loadURL:)
-                                          withClassMethod:@selector(om_loadDocURL:) error:NULL])
-            {
-                NSLog(@"OMQuickHelp: Couldn't swizzle loadURL:");
-            }
-            if(![docCommandHandlerClass jr_swizzleMethod:@selector(searchDocumentationForSelectedText:)
-                                          withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL])
-            {
-                NSLog(@"OMQuickHelp: Couldn't swizzle searchDocumentationForSelectedText:");
-            }
-        }
-        else
-        {
-            NSLog(@"OMQuickHelp: Couldn't find class IDEDocCommandHandler");
-        }
-        
-        Class helpMenuDelegateClass = NSClassFromString(@"IDEHelpMenuDelegate");
-        if (helpMenuDelegateClass) {
-            if(![helpMenuDelegateClass jr_swizzleMethod:@selector(buildMenu:) withMethod:@selector(om_buildMenu:) error:NULL])
-            {
-                NSLog(@"OMQuickHelp: Couldn't swizzle buildMenu:");
-            }
-        }
-        else
-        {
-            NSLog(@"OMQuickHelp: Couldn't find class IDEHelpMenuDelegate");
-        }
-    });
+    }
 }
 
 -(id)init

@@ -16,6 +16,9 @@
     NSMenu *_dashMenu;
 }
 
+@property (assign) BOOL didSwizzle;
+@property (assign) NSInteger swizzleRetryCount;
+
 + (instancetype)sharedInstance;
 + (id)handlerForAction:(SEL)arg1 withSelectionSource:(id)arg2;
 + (id)currentEditor;
