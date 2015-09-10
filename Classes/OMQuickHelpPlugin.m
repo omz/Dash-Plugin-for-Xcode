@@ -363,7 +363,13 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
 
 // Determine the name of the result/page to show, e.g. "NSAlert"
 - (NSString *)om_dashResultNameFromAppleDocURL:(NSURL *)url {
-    return [[url absoluteString] lastPathComponent];
+    NSString *urlString = [url absoluteString];
+    NSString *lastPathComponent = [urlString lastPathComponent];
+    if([lastPathComponent hasPrefix:@"c:"] && [urlString dh_contains:@"/swift/"])
+    {
+        return [[lastPathComponent dh_substringFromLastOccurrenceOfStringExceptSuffix:@"@"] dh_substringFromLastOccurrenceOfStringExceptSuffix:@")"];
+    }
+    return lastPathComponent;
 }
 
 // Determine the path to open

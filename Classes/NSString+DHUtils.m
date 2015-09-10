@@ -196,6 +196,20 @@
     return self;
 }
 
+- (NSString *)dh_substringFromLastOccurrenceOfStringExceptSuffix:(NSString *)string
+{
+    if(self.length <= 1)
+    {
+        return self;
+    }
+    NSRange range = [self rangeOfString:string options:NSBackwardsSearch range:NSMakeRange(0, self.length-1)];
+    if(range.location != NSNotFound)
+    {
+        return [self dh_substringFromIndex:range.location+range.length];
+    }
+    return self;
+}
+
 - (NSString *)dh_substringFromLastOccurrenceOfString:(NSString *)string
 {
     NSRange range = [self rangeOfString:string options:NSBackwardsSearch];

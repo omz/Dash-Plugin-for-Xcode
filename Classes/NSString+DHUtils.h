@@ -6,6 +6,7 @@
 - (NSString *)dh_trimWhitespace;
 - (BOOL)dh_isCaseInsensitiveEqual:(NSString *)object;
 - (BOOL)dh_firstCharIsUppercase;
+- (BOOL)dh_contains:(NSString *)otherString;
 - (BOOL)dh_isUppercase;
 - (BOOL)dh_isLowercase;
 - (NSString *)dh_firstChar;
@@ -15,6 +16,7 @@
 - (NSString *)dh_substringToString:(NSString *)string;
 - (NSString *)dh_substringFromString:(NSString *)string;
 - (NSString *)dh_substringFromLastOccurrenceOfString:(NSString *)string;
+- (NSString *)dh_substringFromLastOccurrenceOfStringExceptSuffix:(NSString *)string;
 - (NSString *)dh_substringFromStringReturningNil:(NSString *)string;
 - (NSString *)dh_substringToStringReturningNil:(NSString *)string;
 - (NSString *)dh_substringBetweenString:(NSString *)start andString:(NSString *)end;
