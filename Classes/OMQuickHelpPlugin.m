@@ -15,6 +15,7 @@
 #define kOMQuickHelpOpenInDashStyle           @"OMOpenInDashStyle"
 #define kOMDashPlatformDetectionEnabled       @"OMDashPlatformDetectionEnabled"
 #define kOMSearchDocumentationOpenInDashStyle @"OMSearchDocumentationOpenInDashStyle"
+#define kOMDebugMode NO
 
 typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     OMQuickHelpPluginIntegrationStyleDisabled = 0,  // Disable this plugin altogether
@@ -58,6 +59,10 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
             return;
 		}
 		NSString *symbolString = [self valueForKeyPath:@"selectedExpression.symbolString"];
+        if(kOMDebugMode)
+        {
+            NSLog(@"om_showQuickHelp with symbolString: %@", symbolString);
+        }
         if(dashStyle == OMQuickHelpPluginIntegrationStyleQuickHelp)
         {
             // handle three-finger tap
@@ -127,6 +132,10 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
         }
 
         NSString *symbolString = [[OMQuickHelpPlugin currentEditor] valueForKeyPath:@"selectedExpression.symbolString"];
+        if(kOMDebugMode)
+        {
+            NSLog(@"om_searchDocumentationForSelectedText with symbolString: %@", symbolString);
+        }
         if (symbolString.length)
         {
             BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
@@ -158,6 +167,10 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
         [[self valueForKey:@"quickHelpController"] performSelector:@selector(closeQuickHelp)];
 
         NSURL *dashURL = [self om_dashURLFromQuickHelpLinkActionInformation:info];
+        if(kOMDebugMode)
+        {
+            NSLog(@"om_handleLinkClickWithActionInformation with dashURL: %@", dashURL);
+        }
         if (dashURL) {
             BOOL dashOpened = [self om_openDashFromURL:dashURL];
             if (!dashOpened) {
@@ -195,6 +208,10 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
                     {
                         id editor = [OMQuickHelpPlugin currentEditor];
                         NSString *symbolString = [editor valueForKeyPath:@"selectedExpression.symbolString"];
+                        if(kOMDebugMode)
+                        {
+                            NSLog(@"om_loadDocURL with symbolString: %@, call stack: %@", symbolString, [NSThread callStackSymbols]);
+                        }
                         if([symbolString isEqualToString:ancestorNames[0]])
                         {
                             BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
@@ -209,6 +226,10 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
         }
         @catch(NSException *exception) { }
         NSURL *dashURL = [self om_dashURLFromAppleDocURL:url];
+        if(kOMDebugMode)
+        {
+            NSLog(@"om_loadDocURL with dashURL: %@, call stack: %@", dashURL, [NSThread callStackSymbols]);
+        }
         if (dashURL) {
             BOOL dashOpened = [self om_openDashFromURL:dashURL];
             if (!dashOpened) {
@@ -229,6 +250,10 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
 {
     id editor = [OMQuickHelpPlugin currentEditor];
     NSString *symbolString = [editor valueForKeyPath:@"selectedExpression.symbolString"];
+    if(kOMDebugMode)
+    {
+        NSLog(@"om_revertToDefaultSymbolSearch with symbolString: %@", symbolString);
+    }
     if(symbolString.length)
     {
         BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
@@ -308,9 +333,14 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
     {
         return nil;
     }
-    return [self om_dashURLForResultWithName:[self om_dashResultNameFromAppleDocURL:url]
-                                        type:[self om_dashResultTypeFromAppleDocURL:url]
-                                        path:[self om_dashResultPathFromAppleDocURL:url]];
+    NSURL *dashURL = [self om_dashURLForResultWithName:[self om_dashResultNameFromAppleDocURL:url]
+                                                  type:[self om_dashResultTypeFromAppleDocURL:url]
+                                                  path:[self om_dashResultPathFromAppleDocURL:url]];
+    if(kOMDebugMode)
+    {
+        NSLog(@"om_dashURLFromAppleDocURL appleDocURL: %@, dashURL: %@", url, dashURL);
+    }
+    return dashURL;
 }
 
 // Determine the type of the result, e.g. "Class" (cl)
