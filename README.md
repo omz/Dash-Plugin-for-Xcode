@@ -11,18 +11,11 @@ I'm [@olemoritz](http://twitter.com/olemoritz) on Twitter.
 1. Download the source, build the Xcode project and restart Xcode. The plugin will automatically be installed in `~/Library/Application Support/Developer/Shared/Xcode/Plug-ins`. To uninstall, just remove the plugin from there (and restart Xcode).
 2. To use - **Option-Click** any method/class/symbol in Xcode's text editor. 
 3. If you prefer the **keyboard**, set up a shortcut in Xcode's Preferences > Key Bindings for **Quick Help for Selected Item** or **Search Documentation for Selected Text**.
-4. If you like the default Xcode **quick help popover**, check out the [Quick Help Popover Usage](#quick-help-popover) section below.
-5. The plugin can automatically enable/disable docsets (e.g. OS X or iOS) based on what you're working on. Check out the [Automatic Platform Detection](#automatic-platform-detection) section below.
+4. The plugin can automatically enable/disable docsets (e.g. OS X or iOS) based on what you're working on. Check out the [Automatic Platform Detection](#automatic-platform-detection) section below.
 
 ## Alcatraz
 
 This plugin can be installed using [Alcatraz](http://alcatraz.io/). Search for `OMQuickHelp` in Alcatraz.
-
-## Quick Help Popover
-
-If you like the quick help popover that Xcode shows by default when you Option-Click something, you can re-enable it by going to **Xcode's Help > Dash Integration > Replace Quick Help Reference Link**. 
-
-With this option enabled, Dash will only open when you Option-Double Click something or when you click a link in the quick help popover.
 
 ## Automatic Platform Detection
 

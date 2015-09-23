@@ -83,19 +83,6 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
         if(symbolString.length)
         {
             if (dashStyle == OMQuickHelpPluginIntegrationStyleQuickHelp) {
-                BOOL success = NO;
-                @try {
-                    Class quickHelpCommandHandler = NSClassFromString(@"IDEQuickHelpCommandHandler");
-                    if(quickHelpCommandHandler)
-                    {
-                        id commandHandler = [quickHelpCommandHandler handlerForAction:@selector(showDocumentationForSymbol:) withSelectionSource:self];
-                        [commandHandler performSelector:@selector(showDocumentationForSymbol:) withObject:self];
-                        success = YES;
-                    }
-                }
-                @catch(NSException *exception) { }
-                if(!success)
-                {
                     BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
                     if (!dashOpened) {
                         [self om_dashNotInstalledFallback];
@@ -743,11 +730,6 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
             
             Class docCommandHandlerClass = NSClassFromString(@"IDEDocCommandHandler");
             if (docCommandHandlerClass) {
-                if(![docCommandHandlerClass jr_swizzleClassMethod:@selector(loadURL:)
-                                                  withClassMethod:@selector(om_loadDocURL:) error:NULL])
-                {
-                    NSLog(@"OMQuickHelp: Couldn't swizzle loadURL:");
-                }
                 if(![docCommandHandlerClass jr_swizzleMethod:@selector(searchDocumentationForSelectedText:)
                                                   withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL])
                 {
@@ -804,10 +786,6 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
         [quickHelpStyleItem setTarget:self];
         [quickHelpIntegrationStyleMenuItems addObject:quickHelpStyleItem];
 
-        NSMenuItem *quickHelpReferenceLinkStyleItem = [dashMenu addItemWithTitle:@"Replace Quick Help Reference Link" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
-        quickHelpReferenceLinkStyleItem.tag = OMQuickHelpPluginIntegrationStyleReference;
-        [quickHelpReferenceLinkStyleItem setTarget:self];
-        [quickHelpIntegrationStyleMenuItems addObject:quickHelpReferenceLinkStyleItem];
 
         _quickHelpIntegrationStyleMenuItems = [quickHelpIntegrationStyleMenuItems copy];
 
