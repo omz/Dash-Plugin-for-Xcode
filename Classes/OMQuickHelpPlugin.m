@@ -20,9 +20,12 @@
 typedef NS_ENUM(NSInteger, OMQuickHelpPluginIntegrationStyle) {
     OMQuickHelpPluginIntegrationStyleDisabled = 0,  // Disable this plugin altogether
     OMQuickHelpPluginIntegrationStyleQuickHelp,     // Search Dash instead of showing the "Quick Help" popup
-    OMQuickHelpPluginIntegrationStyleReference,      // Show the "Quick Help" popup, but search Dash instead
+    OMQuickHelpPluginIntegrationStyleReference,     // Show the "Quick Help" popup, but search Dash instead
                                                     // of showing Xcode's documentation viewer (when the "Reference" link
                                                     // in the popup is clicked)
+                                                    // DISABLED: There's no way to get the search term from the new style
+                                                    // of links Apple's using, especially for Swift terms like
+                                                    // IntegerLiteralConvertible
 };
 
 typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
@@ -83,11 +86,24 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
         if(symbolString.length)
         {
             if (dashStyle == OMQuickHelpPluginIntegrationStyleQuickHelp) {
+//                BOOL success = NO;
+//                @try {
+//                    Class quickHelpCommandHandler = NSClassFromString(@"IDEQuickHelpCommandHandler");
+//                    if(quickHelpCommandHandler)
+//                    {
+//                        id commandHandler = [quickHelpCommandHandler handlerForAction:@selector(showDocumentationForSymbol:) withSelectionSource:self];
+//                        [commandHandler performSelector:@selector(showDocumentationForSymbol:) withObject:self];
+//                        success = YES;
+//                    }
+//                }
+//                @catch(NSException *exception) { }
+//                if(!success)
+//                {
                     BOOL dashOpened = [self om_showQuickHelpForSearchString:symbolString];
                     if (!dashOpened) {
                         [self om_dashNotInstalledFallback];
                     }
-                }
+//                }
             } else {
                 // Show regular quick help--wait to search Dash until the user clicks on a link
                 //No, this is not an infinite loop because the method is swizzled
@@ -150,6 +166,10 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
             return;
         }
 
+        if(kOMDebugMode)
+        {
+            NSLog(@"om_handleLinkClickWithActionInformation with info: %@", info);
+        }
         // Dismiss the quick help popup
         [[self valueForKey:@"quickHelpController"] performSelector:@selector(closeQuickHelp)];
 
@@ -316,6 +336,7 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
 }
 
 - (NSURL *)om_dashURLFromAppleDocURL:(NSURL *)url {
+    return nil;
     if(![url fragment] || [[url fragment] rangeOfString:@"apple_ref"].location == NSNotFound)
     {
         return nil;
@@ -730,6 +751,11 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
             
             Class docCommandHandlerClass = NSClassFromString(@"IDEDocCommandHandler");
             if (docCommandHandlerClass) {
+//                if(![docCommandHandlerClass jr_swizzleClassMethod:@selector(loadURL:)
+//                                                  withClassMethod:@selector(om_loadDocURL:) error:NULL])
+//                {
+//                    NSLog(@"OMQuickHelp: Couldn't swizzle loadURL:");
+//                }
                 if(![docCommandHandlerClass jr_swizzleMethod:@selector(searchDocumentationForSelectedText:)
                                                   withMethod:@selector(om_searchDocumentationForSelectedText:) error:NULL])
                 {
@@ -786,11 +812,19 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
         [quickHelpStyleItem setTarget:self];
         [quickHelpIntegrationStyleMenuItems addObject:quickHelpStyleItem];
 
+//        NSMenuItem *quickHelpReferenceLinkStyleItem = [dashMenu addItemWithTitle:@"Replace Quick Help Reference Link" action:@selector(toggleIntegrationStyle:) keyEquivalent:@""];
+//        quickHelpReferenceLinkStyleItem.tag = OMQuickHelpPluginIntegrationStyleReference;
+//        [quickHelpReferenceLinkStyleItem setTarget:self];
+//        [quickHelpIntegrationStyleMenuItems addObject:quickHelpReferenceLinkStyleItem];
 
         _quickHelpIntegrationStyleMenuItems = [quickHelpIntegrationStyleMenuItems copy];
 
         // the default menu option should be to replace the quick help popup
         if (![[NSUserDefaults standardUserDefaults] objectForKey:kOMQuickHelpOpenInDashStyle]) {
+            [[NSUserDefaults standardUserDefaults] setInteger:OMQuickHelpPluginIntegrationStyleQuickHelp forKey:kOMQuickHelpOpenInDashStyle];
+        }
+        
+        if ([[NSUserDefaults standardUserDefaults] integerForKey:kOMQuickHelpOpenInDashStyle] == OMQuickHelpPluginIntegrationStyleReference) {
             [[NSUserDefaults standardUserDefaults] setInteger:OMQuickHelpPluginIntegrationStyleQuickHelp forKey:kOMQuickHelpOpenInDashStyle];
         }
         
