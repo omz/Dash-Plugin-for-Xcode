@@ -685,13 +685,17 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
 
 + (void)pluginDidLoad:(NSBundle *)plugin
 {
-    if([[NSRunningApplication currentApplication] isFinishedLaunching])
+    NSString *currentApplicationName = [[NSBundle mainBundle] infoDictionary][@"CFBundleName"];
+    if([currentApplicationName hasPrefix:@"Xcode"])
     {
-        [[OMQuickHelpPlugin sharedInstance] swizzle];
+        if([[NSRunningApplication currentApplication] isFinishedLaunching])
+        {
+            [[OMQuickHelpPlugin sharedInstance] swizzle];
+        }
+        // This is needed because Xcode 6.4+ loads the plugin before loading its own stuff (i.e. IDESourceCodeEditor),
+        // which causes swizzle to fail
+        [[NSNotificationCenter defaultCenter] addObserver:[OMQuickHelpPlugin sharedInstance] selector:@selector(swizzle) name:NSApplicationDidFinishLaunchingNotification object:nil];
     }
-    // This is needed because Xcode 6.4+ loads the plugin before loading its own stuff (i.e. IDESourceCodeEditor),
-    // which causes swizzle to fail
-    [[NSNotificationCenter defaultCenter] addObserver:[OMQuickHelpPlugin sharedInstance] selector:@selector(swizzle) name:NSApplicationDidFinishLaunchingNotification object:nil];
 }
 
 - (void)swizzle
