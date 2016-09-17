@@ -1,3 +1,5 @@
+**This plugin does not work with Xcode 8. The Xcode 8 extensions API is unreliable and extremely lacking. An Xcode 8 extension will be released as soon as I figure out a way to get them to work.**
+
 # Dash Plugin for Xcode
 
 ## Overview
