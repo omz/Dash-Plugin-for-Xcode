@@ -514,45 +514,45 @@ typedef NS_ENUM(NSInteger, OMSearchDocumentationPluginIntegrationStyle) {
                             {
                                 if(iOS)
                                 {
-                                    searchString = [@"dash-plugin://keys=cpp,iphoneos,watchos,appledoc,cocoapods,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=apple,cpp,iphoneos,watchos,appledoc,cocoapods,cocos2dx,cocos2d,cocos3d,kobold2d,sparrow,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(mac)
                                 {
-                                    searchString = [@"dash-plugin://keys=cpp,macosx,appledoc,cocoapods,cocos2dx,cocos2d,cocos3d,kobold2d,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=apple,cpp,macosx,appledoc,cocoapods,cocos2dx,cocos2d,cocos3d,kobold2d,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(tvos)
                                 {
-                                    searchString = [@"dash-plugin://keys=cpp,tvos,appledoc,cocoapods,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=apple,cpp,tvos,appledoc,cocoapods,c,manpages&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                             }
                             else if(isSwift)
                             {
                                 if(iOS)
                                 {
-                                    searchString = [@"dash-plugin://keys=iphoneos,watchos,swift,appledoc,cocoapods,cocos2d,cocos3d,kobold2d,sparrow&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=apple,iphoneos,watchos,swift,appledoc,cocoapods,cocos2d,cocos3d,kobold2d,sparrow&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(mac)
                                 {
-                                    searchString = [@"dash-plugin://keys=macosx,swift,appledoc,cocoapods,cocos2d,cocos3d,kobold2d&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=apple,macosx,swift,appledoc,cocoapods,cocos2d,cocos3d,kobold2d&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(tvos)
                                 {
-                                    searchString = [@"dash-plugin://keys=tvos,swift,appledoc,cocoapods&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=apple,tvos,swift,appledoc,cocoapods&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                             }
                             else
                             {
                                 if(iOS)
                                 {
-                                    searchString = [@"dash-plugin://keys=iphoneos,watchos,appledoc,cocoapods,cocos2d,cocos3d,kobold2d,sparrow&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=apple,iphoneos,watchos,appledoc,cocoapods,cocos2d,cocos3d,kobold2d,sparrow&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(mac)
                                 {
-                                    searchString = [@"dash-plugin://keys=macosx,appledoc,cocoapods,cocos2d,cocos3d,kobold2d&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=apple,macosx,appledoc,cocoapods,cocos2d,cocos3d,kobold2d&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                                 else if(tvos)
                                 {
-                                    searchString = [@"dash-plugin://keys=tvos,appledoc,cocoapods&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+                                    searchString = [@"dash-plugin://keys=apple,tvos,appledoc,cocoapods&query=" stringByAppendingString:[searchString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
                                 }
                             }
                         }
