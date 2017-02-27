@@ -1,8 +1,8 @@
 # Xcode 8 Notice
 
-**This plugin does not work with Xcode 8. The new Xcode 8 extensions API is unreliable and extremely lacking. An Xcode 8 extension will not be released as it would not add any functionality that isn't there already.** The recommended workaround is to set up a [Search using selected text](https://kapeli.com/dash_guide#lookUpInDashSystemService) shortcut in Dash's Preferences > General.
+**This plugin does not work with Xcode 8. The new Xcode 8 extensions API is unreliable and extremely lacking. An Xcode 8 extension will not be released as it would not add any functionality that isn't there already.** The recommended workaround is to set up a [Search using selected text](https://kapeli.com/dash_guide#globalSearchShortcut) shortcut in Dash's Preferences > General.
 
-If you absolutely must use an extension in Xcode 8, the [Xcode Search](https://github.com/skyline75489/Xcode-Search#readme) and [xTextHandler](https://github.com/cyanzhong/xTextHandler#readme) extensions support Dash. I don't recommend this, as extensions don't do anything more than what the [Look Up in Dash](https://kapeli.com/dash_guide#lookUpInDashSystemService) system service already does.
+If you absolutely must use an extension in Xcode 8, the [Xcode Search](https://github.com/skyline75489/Xcode-Search#readme) and [xTextHandler](https://github.com/cyanzhong/xTextHandler#readme) extensions support Dash. I don't recommend this, as extensions don't do anything more than what the [Search using selected text](https://kapeli.com/dash_guide#globalSearchShortcut) keyboard shortcut does.
 
 # Dash Plugin for Xcode 7 and earlier
 
